@@ -1,7 +1,3 @@
-- user defined operator
-    - infixl infixr
-    - (op)
-- bulitin op
 - tuple
     - param
     * value
@@ -12,6 +8,10 @@
 - variant
 - typedef
 - pattern
+- user defined operator
+    - infixl infixr
+    - (op)
+- bulitin op
 - library
 - lazy
 - stream

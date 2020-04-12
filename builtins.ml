@@ -51,10 +51,6 @@ let fn_vtos _ env v =
 let fn_sof _ env v =
     (env, VString (str_of v))
 
-(*
-append = fn x -> fn y -> x == [] ? y : (hd x) :: append (tl x) y
-*)
-
 let fn_env _ env _ =
     List.iter
         (fun e ->

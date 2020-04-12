@@ -370,6 +370,8 @@ let eval_test_texts = [
     ("import List as L", VUnit);
     ("L.length [1,2,3]", VInt 3);
     ("L.length \"abcd\"", VInt 4);
+    ("[1,2] + [3]", VCons (VInt 1, VCons (VInt 2, VCons (VInt 3, VNull))));
+    ("\"ab\" + ['c']", VCons (VChar 'a', VCons (VChar 'b', VCons (VChar 'c', VNull))));
 ]
 
 

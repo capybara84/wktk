@@ -35,6 +35,8 @@ let new_list () =
 let new_type_schema ty =
     { vars = []; body = ty }
 
+let is_list = function TList _ -> true | _ -> false
+
 let rec equal t1 t2 =
     match (t1, t2) with
     | (TUnit, TUnit) | (TBool, TBool) | (TInt, TInt) | (TChar, TChar)
@@ -254,15 +256,16 @@ let rec infer tenv e =
             match op with
             | BinAdd | BinSub | BinMul | BinDiv | BinMod ->
                 unify tl tr pos;
-                if is_type_in tl [TInt;TFloat] || is_tvar tl then tl
+                if is_type_in tl [TInt;TFloat;TString] || is_tvar tl then tl
+                else if is_list tl then tl
                 else
                     error pos @@ "The binary expression has type " ^ s_typ tl ^
-                                    " but an expression was expected of type int/float"
+                                    " but an expression was expected of type int/float/string/list"
             | BinLT | BinLE | BinGT | BinGE ->
                 unify tl tr pos;
                 if is_type_in tl [TChar;TInt;TFloat;TString;TList TChar] || is_tvar tl then TBool
                 else error pos @@ "The relational expression has type " ^ s_typ tl ^
-                                    " but an expression was expected of type char/int/float/string"
+                                    " but an expression was expected of type char/int/float/string/list"
             | BinEql | BinNeq ->
                 unify tl tr pos;
                 TBool

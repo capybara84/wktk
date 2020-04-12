@@ -19,6 +19,23 @@ let debug_eval_out s =
     if !debug_scope_flag then
         (decr debug_indent; debug_eval @@ "OUT " ^ s)
 
+let rec cons_append x y =
+    match x with
+    | VNull -> y
+    | VCons (x, xs) -> VCons (x, cons_append xs y)
+    | _ -> failwith "cons_append"
+
+let rec cons_reverse = function
+    | VNull -> VNull
+    | VCons (x, xs) -> cons_append (cons_reverse xs) (VCons (x, VNull))
+    | _ -> failwith "cons_reverse"
+
+let string_to_cons s =
+    let rec loop acc = function
+        | "" -> cons_reverse acc
+        | x -> loop (VCons (VChar (String.get x 0), acc)) (String.sub x 1 (String.length x - 1))
+    in loop VNull s
+
 let mod_lookup ml s env =
     match ml with
     | [x] ->
@@ -75,6 +92,17 @@ let rec eval env e =
         | (UNot, VBool b) -> VBool (not b)
         | _ -> error pos "type error (unary)"
     in
+    let rec eval_add pos = function
+        | (VString l, VString r) -> VString (l ^ r)
+        | (VString l, VNull) -> VString l
+        | (VNull, VString r) -> VString r
+        | (VCons _ as l, VString r) -> eval_add pos (l, string_to_cons r)
+        | (VString l, (VCons _ as r)) -> eval_add pos (string_to_cons l, r)
+        | (VCons _ as l, VNull) -> l
+        | (VNull, (VCons _ as r)) -> r
+        | (VCons _ as l, (VCons _ as r)) -> cons_append l r
+        | _ -> error pos "type error (binary +)"
+    in
     let eval_binary pos = function
         | (BinEql, vl, vr) -> VBool (eval_equal pos (vl, vr))
         | (BinNeq, vl, vr) -> VBool (not (eval_equal pos (vl, vr)))
@@ -104,6 +132,7 @@ let rec eval env e =
         | (BinGT, VString l, VString r) -> VBool (l > r)
         | (BinGE, VString l, VString r) -> VBool (l >= r)
         | (BinCons, vl, vr) -> VCons (vl, vr)
+        | (BinAdd, vl, vr) -> eval_add pos (vl, vr)
         | _ -> error pos "type error (binary)"
     in
     let rec eval_list pos env = function

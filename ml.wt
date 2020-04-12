@@ -1,43 +1,43 @@
 type id = string
 
 type exp = Eint int | Ebool bool | Symbol id
-    | Add (exp, exp) |  Sub (exp, exp) | Mul (exp, exp) | Div (exp, exp)
-    | Eq (exp, exp) | Lt (exp, exp) | Le (exp, exp) | And (exp, exp)
-    | Or (exp, exp) | Not exp | Minus exp | If (exp, exp, exp)
-    | Let (id, exp, exp) | Letrec (id, exp, exp) | Fn (id, exp)
-    | Apply (exp, exp)
+    | Add (exp * exp) |  Sub (exp * exp) | Mul (exp * exp) | Div (exp * exp)
+    | Eq (exp * exp) | Lt (exp * exp) | Le (exp * exp) | And (exp * exp)
+    | Or (exp * exp) | Not exp | Minus exp | If (exp * exp * exp)
+    | Let (id * exp * exp) | Letrec (id * exp * exp) | Fn (id * exp)
+    | Apply (exp * exp)
 
-type 't env_t = [(id, 't)]
+type 't env_t = (id * 't) list
 
 type value =
     | VInt int
     | VBool bool
-    | Closure (id, exp, value env_t)
-    | RecClosure (id, id, exp, value env_t)
+    | Closure (id * exp * value env_t)
+    | RecClosure (id * id * exp * value env_t)
 
 env_extend env id value = (id, value) :: env
 env_lookup env id = List.assoc id env
 
 exp_to_str = {
-    | Eint n -> "Eint " ++ string_of_int n
-    | Ebool b -> "Ebool " ++ string_of_bool b
-    | Symbol id -> "Symbol \"" ++ id ++ "\""
-    | Add (x, y) -> "Add (" ++ exp_to_str x ++ ", " ++ exp_to_str y ++ ")"
-    | Sub (x, y) -> "Sub (" ++ exp_to_str x ++ ", " ++ exp_to_str y ++ ")"
-    | Mul (x, y) -> "Mul (" ++ exp_to_str x ++ ", " ++ exp_to_str y ++ ")"
-    | Div (x, y) -> "Div (" ++ exp_to_str x ++ ", " ++ exp_to_str y ++ ")"
-    | Eq (x, y) -> "Eq (" ++ exp_to_str x ++ ", " ++ exp_to_str y ++ ")"
-    | Lt (x, y) -> "Lt (" ++ exp_to_str x ++ ", " ++ exp_to_str y ++ ")"
-    | Le (x, y) -> "Le (" ++ exp_to_str x ++ ", " ++ exp_to_str y ++ ")"
-    | And (x, y) -> "And (" ++ exp_to_str x ++ ", " ++ exp_to_str y ++ ")"
-    | Or (x, y) -> "Or (" ++ exp_to_str x ++ ", " ++ exp_to_str y ++ ")"
-    | Not e -> "Not " ++ exp_to_str e
-    | Minus e -> "Minus " ++ exp_to_str e
-    | If (c, t, e) -> "If (" ++ exp_to_str c ++ ", " ++ exp_to_str t ++ ", " ++ exp_to_str e ++ ")"
-    | Let (id, e, b) -> "Let (\"" ++ id ++ "\", " ++ exp_to_str e ++ ", " ++ exp_to_str b ++ ")"
-    | Letrec (id, e, b) -> "Letrec (\"" ++ id ++ "\", " ++ exp_to_str e ++ ", " ++ exp_to_str b ++ ")"
-    | Fn (a, b) -> "Fn (\"" ++ a ++ "\", " ++ exp_to_str b ++ ")"
-    | Apply (f, a) -> "Apply (" ++ exp_to_str f ++ ", " ++ exp_to_str a ++ ")"
+    | Eint n -> "Eint " + string_of_int n
+    | Ebool b -> "Ebool " + string_of_bool b
+    | Symbol id -> "Symbol \"" + id + "\""
+    | Add (x, y) -> "Add (" + exp_to_str x + ", " + exp_to_str y + ")"
+    | Sub (x, y) -> "Sub (" + exp_to_str x + ", " + exp_to_str y + ")"
+    | Mul (x, y) -> "Mul (" + exp_to_str x + ", " + exp_to_str y + ")"
+    | Div (x, y) -> "Div (" + exp_to_str x + ", " + exp_to_str y + ")"
+    | Eq (x, y) -> "Eq (" + exp_to_str x + ", " + exp_to_str y + ")"
+    | Lt (x, y) -> "Lt (" + exp_to_str x + ", " + exp_to_str y + ")"
+    | Le (x, y) -> "Le (" + exp_to_str x + ", " + exp_to_str y + ")"
+    | And (x, y) -> "And (" + exp_to_str x + ", " + exp_to_str y + ")"
+    | Or (x, y) -> "Or (" + exp_to_str x + ", " + exp_to_str y + ")"
+    | Not e -> "Not " + exp_to_str e
+    | Minus e -> "Minus " + exp_to_str e
+    | If (c, t, e) -> "If (" + exp_to_str c + ", " + exp_to_str t + ", " + exp_to_str e + ")"
+    | Let (id, e, b) -> "Let (\"" + id + "\", " + exp_to_str e + ", " + exp_to_str b + ")"
+    | Letrec (id, e, b) -> "Letrec (\"" + id + "\", " + exp_to_str e + ", " + exp_to_str b + ")"
+    | Fn (a, b) -> "Fn (\"" + a + "\", " + exp_to_str b + ")"
+    | Apply (f, a) -> "Apply (" + exp_to_str f + ", " + exp_to_str a + ")"
 }
 
 value_to_str = {

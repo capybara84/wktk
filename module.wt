@@ -12,8 +12,8 @@ y = 11
 
 module Main
 _ = {
-    put "x = "; putn x; nl()
-    put "A.x = "; putn A.x; nl()
-    put "B.x = "; putn B.x; nl()
+    puts ("x = " + sof x)
+    puts ("A.x = " + sof A.x)
+    puts ("B.x = " + sof B.x)
     modules()
 }

@@ -9,10 +9,9 @@ let fn_nl _ env _ =
     (env, VUnit)
 
 let fn_put pos env = function
-    | VString s -> print_string s; (env, VUnit)
-    | _ -> type_error pos "string"
+    | VString s -> print_string s; (env, VUnit) | _ -> type_error pos "string"
 
-let fn_putn pos env = function
+let fn_puti pos env = function
     | VInt n -> print_int n; (env, VUnit)
     | _ -> type_error pos "int"
 
@@ -46,6 +45,12 @@ let fn_snd pos env = function
     | VTuple (_::x::_) -> (env, x)
     | _ -> type_error pos "tuple"
 
+let fn_vtos _ env v =
+    (env, VString (s_value v))
+
+let fn_sof _ env v =
+    (env, VString (str_of v))
+
 (*
 append = fn x -> fn y -> x == [] ? y : (hd x) :: append (tl x) y
 *)
@@ -73,18 +78,22 @@ and builtins_list =
     let fst_type = Type.new_tvar () in
     let snd_any_type = Type.new_tvar () in
     let snd_type = Type.new_tvar () in
+    let vtos_type = Type.new_tvar () in
+    let sof_type = Type.new_tvar () in
     [
         ("true", TBool, VBool true);
         ("false", TBool, VBool false);
         ("nl", TFun (TUnit, TUnit), VBuiltin fn_nl);
         ("put", TFun (TString, TUnit), VBuiltin fn_put);
-        ("putn", TFun (TInt, TUnit), VBuiltin fn_putn);
+        ("puti", TFun (TInt, TUnit), VBuiltin fn_puti);
         ("putv", TFun (putv_type, TUnit), VBuiltin fn_putv);
         ("puts", TFun (TString, TUnit), VBuiltin fn_puts);
         ("hd", TFun (TList head_type, head_type), VBuiltin fn_head);
         ("tl", TFun (TList tail_type, TList tail_type), VBuiltin fn_tail);
         ("fst", TFun (TTuple (fst_type::[fst_any_type]), fst_type), VBuiltin fn_fst);
         ("snd", TFun (TTuple (snd_any_type::[snd_type]), snd_type), VBuiltin fn_snd);
+        ("vtos", TFun (vtos_type, TString), VBuiltin fn_vtos); 
+        ("sof", TFun (sof_type, TString), VBuiltin fn_sof); 
         ("env", TFun (TUnit, TUnit), VBuiltin fn_env);
         ("builtins", TFun (TUnit, TUnit), VBuiltin fn_builtins);
         ("modules", TFun (TUnit, TUnit), VBuiltin fn_modules);

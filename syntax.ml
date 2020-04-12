@@ -205,6 +205,26 @@ let rec s_expr = function
     | (EImport (mid, Some aid), _) -> "(import " ^ mid ^ " as " ^ aid ^ ")"
 and s_exprlist sep = s_list s_expr sep
 
+let rec str_of = function
+    | VUnit -> "()"
+    | VNull -> "[]"
+    | VBool b -> string_of_bool b
+    | VInt n -> string_of_int n
+    | VChar c -> String.make 1 c
+    | VFloat f -> string_of_float f
+    | VString s -> s
+    | VTuple vl -> "(" ^ s_list str_of ", " vl ^ ")"
+    | VCons (VChar c, VNull) -> String.make 1 c
+    | VCons (VChar c, cdr) -> String.make 1 c ^ str_of cdr
+    | VCons _ as xs -> "[" ^ str_of_cons xs ^ "]"
+    | VClosure _ -> "<closure>"
+    | VBuiltin _ -> "<builtin>"
+and str_of_cons = function
+    | VNull -> ""
+    | VCons (h, VNull) -> str_of h
+    | VCons (h, t) -> str_of h ^ "," ^ str_of_cons t
+    | _ -> failwith "str_of_cons"
+
 let rec s_value = function
     | VUnit -> "()"
     | VNull -> "[]"
@@ -214,9 +234,19 @@ let rec s_value = function
     | VFloat f -> string_of_float f
     | VString s -> quote s
     | VTuple vl -> "(" ^ s_list s_value ", " vl ^ ")"
-    | VCons (car, cdr) -> "(" ^ s_value car ^ "::" ^ s_value cdr ^ ")"
+    | VCons (VChar _, _) as s -> quote (s_value_str s)
+    | VCons _ as xs -> "[" ^ s_value_cons xs ^ "]"
     | VClosure _ -> "<closure>"
     | VBuiltin _ -> "<builtin>"
+and s_value_cons = function
+    | VNull -> ""
+    | VCons (h, VNull) -> s_value h
+    | VCons (h, t) -> s_value h ^ "," ^ s_value_cons t
+    | _ -> failwith "s_value_cons"
+and s_value_str = function
+    | VCons (VChar c, VNull) -> String.make 1 c
+    | VCons (VChar c, cdr) -> String.make 1 c ^ s_value_str cdr
+    | _ -> failwith "s_value_str"
 
 let s_lit_src = function
     | Bool b -> "Bool " ^ string_of_bool b

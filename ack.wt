@@ -6,8 +6,5 @@ ack n m =
     else
         ack (n-1) (ack n (m-1))
 
-_ = {
-    putn (ack 3 3)
-    nl()
-}
+_ = puts ("ack 3 3 = " + sof (ack 3 3))
 

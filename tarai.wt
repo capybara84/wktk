@@ -1,13 +1,10 @@
 tarai x y z = {
-//    puts "tarai "; putn x; puts " "; putn y; puts " "; putn z; nl ()
+    puts ("tarai " + sof x + " " + sof y + " " + sof z)
     if x <= y then
         y
     else
         tarai (tarai (x-1) y z) (tarai (y-1) z x) (tarai (z-1) x y)
 }
 
-_ = {
-    putn (tarai 8 7 0)
-    nl ()
-}
+_ = puts (sof (tarai 8 7 0))
 

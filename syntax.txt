@@ -34,7 +34,7 @@ comp_expr
 cond_expr
     = bin_expr ['?' expr ':' expr]
 bin_expr
-    = apply_expr {bin_op apply_expr}
+    = apply_expr {bin_op bin_expr}
 apply_expr
     = unary_expr {simple_expr}
 unary_expr

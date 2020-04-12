@@ -268,7 +268,7 @@ and parse_apply_expr pars =
 
 (*
 bin_expr
-    = apply_expr {bin_op apply_expr}
+    = apply_expr {bin_op bin_expr}
 *)
 and parse_bin_expr pars =
     debug_parse_in @@ "parse_bin_expr: " ^ s_token_src_list pars.toks;
@@ -279,7 +279,7 @@ and parse_bin_expr pars =
             let op = token_to_op t in
             next_token pars;
             skip_newline pars;
-            let rhs = parse_apply_expr pars in
+            let rhs = parse_bin_expr pars in
             parse_rhs (make_binop op lhs rhs) pars
         | _ -> lhs
     in

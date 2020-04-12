@@ -141,6 +141,7 @@ let parser_test_texts = [
     ("_ = 1 ?\n 2\n :\n 3",     "[(ELetRec (\"_\", (ECond ((ELit (Int 1)), (ELit (Int 2)), (ELit (Int 3))))))]");
     ("_ = 1 + 2",               "[(ELetRec (\"_\", (EBinary (BinAdd, (ELit (Int 1)), (ELit (Int 2))))))]");
     ("_ = 1 + 2 * 3",           "[(ELetRec (\"_\", (EBinary (BinAdd, (ELit (Int 1)), (EBinary (BinMul, (ELit (Int 2)), (ELit (Int 3))))))))]");
+    ("_ = 1 == 2 ? 10 : 20",    "[(ELetRec (\"_\", (ECond ((EBinary (BinEql, (ELit (Int 1)), (ELit (Int 2)))), (ELit (Int 10)), (ELit (Int 20))))))]");
     ("_ = 1 - 2 * 3 + 4",       "[(ELetRec (\"_\", (EBinary (BinAdd, (EBinary (BinSub, (ELit (Int 1)), (EBinary (BinMul, (ELit (Int 2)), (ELit (Int 3)))))), (ELit (Int 4))))))]");
     ("_ = 1 - 2 < 3 - 4",       "[(ELetRec (\"_\", (EBinary (BinLT, (EBinary (BinSub, (ELit (Int 1)), (ELit (Int 2)))), (EBinary (BinSub, (ELit (Int 3)), (ELit (Int 4))))))))]");
     ("_ = 1 :: 2 :: 3", "[(ELetRec (\"_\", (EBinary (BinCons, (ELit (Int 1)), (EBinary (BinCons, (ELit (Int 2)), (ELit (Int 3))))))))]");

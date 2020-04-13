@@ -1,5 +1,5 @@
 tak x y z = {
-    puts ("tak " + sof x + " " + sof y + " " + sof z)
+//    puts ("tak " + sof x + " " + sof y + " " + sof z)
     if x <= y then
         z
     else

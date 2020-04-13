@@ -5,7 +5,7 @@ type exp = Eint int | Ebool bool | Symbol id
     | Eq (exp * exp) | Lt (exp * exp) | Le (exp * exp) | And (exp * exp)
     | Or (exp * exp) | Not exp | Minus exp | If (exp * exp * exp)
     | Let (id * exp * exp) | Letrec (id * exp * exp) | Fn (id * exp)
-    | Apply (exp * exp)
+    | Apply exp * exp
 
 type 't env_t = (id * 't) list
 

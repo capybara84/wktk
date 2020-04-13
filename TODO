@@ -5,15 +5,18 @@
 * module
     - module path
 - type decl
+- record
 - variant
-- typedef
 - pattern
 - user defined operator
+    - eval builtin operator <- symtab にオペレーターも入れたい。
     - infixl infixr
     - (op)
 - bulitin op
 - library
 - lazy
 - stream
+- profiling (どこで時間くっているのか。重い）
 - byte code
 - native code
+

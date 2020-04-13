@@ -10,8 +10,8 @@ exception Error of source_pos * string
 type lit = Bool of bool | Int of int | Char of char | Float of float | String of string
 
 type token_decl =
-    | Eof | Newline | Id of string | CId of string | Lit of lit | Op of string
-    | Module | Import | As | Let | Rec | If | Then | Else | Fn
+    | Eof | Newline | Id of string | CId of string | Lit of lit | Op of string | TId of int
+    | Module | Import | As | Type | Mut | Let | Rec | If | Then | Else | Fn
     | Semi | Colon | DColon | Comma | Dot | Null | Unit | Vertical | Ques | Eq | LOr | LAnd
     | Eql | Neq | LT | LE | GT | GE | Plus | Minus | Star | Slash | Percent | Not
     | LBrace | RBrace | LParen | RParen | LBracket | RBracket | RArrow
@@ -49,6 +49,9 @@ type expr_decl =
     | ESeq of expr list
     | EModule of string
     | EImport of string * string option
+(* TODO
+    | ETypeDef of int list * string * typ 
+*)
 
 and expr = expr_decl * source_pos
 
@@ -108,10 +111,16 @@ let rec s_list to_s sep = function
     | [x] -> to_s x
     | x::xs -> to_s x ^ sep ^ s_list to_s sep xs
 
+let int_to_alpha x =
+    if x <= Char.code 'z' - Char.code 'a' then
+        String.make 1 (Char.chr ((Char.code 'a') + x))
+    else
+        string_of_int x
 
 let s_token = function
     | Eof -> "<EOF>" | Newline -> "<NEWLINE>" | Id s -> s | CId s -> s | Lit l -> s_lit l | Op s -> s
-    | Module -> "module" | Import -> "import" | As -> "as"
+    | TId n -> "'" ^ int_to_alpha n
+    | Module -> "module" | Import -> "import" | As -> "as" | Type -> "type" | Mut -> "mut"
     | Let -> "let" | Rec -> "rec" | If -> "if" | Then -> "then" | Else -> "else" | Fn -> "fn"
     | Semi -> ";" | Colon -> ":" | DColon -> "::" | Comma -> "," | Dot -> "." | Null -> "[]"
     | Unit -> "()" | Vertical -> "|" | Ques -> "?" | Eq -> "=" | LOr -> "||" | LAnd -> "&&"
@@ -119,12 +128,6 @@ let s_token = function
     | Plus -> "+" | Minus -> "-" | Star -> "*" | Slash -> "/" | Percent -> "%" | Not -> "!"
     | LBrace -> "{" | RBrace -> "}" | LParen -> "(" | RParen -> ")" | LBracket -> "["
     | RBracket -> "]" | RArrow -> "->" 
-
-let int_to_alpha x =
-    if x <= Char.code 'z' - Char.code 'a' then
-        String.make 1 (Char.chr ((Char.code 'a') + x))
-    else
-        string_of_int x
 
 let s_typ ty =
     let counter = ref 0 in
@@ -257,8 +260,8 @@ let s_lit_src = function
 
 let s_token_src = function
     | Eof -> "Eof" | Newline -> "Newline" | Id s -> "Id " ^ quote s | CId s -> "CId " ^ quote s
-    | Lit l -> "Lit (" ^ s_lit_src l ^ ")" | Op s -> "Op " ^ quote s
-    | Module -> "Module" | Import -> "Import" | As -> "As"
+    | Lit l -> "Lit " ^ s_lit_src l | Op s -> "Op " ^ quote s | TId n -> "TId " ^ string_of_int n
+    | Module -> "Module" | Import -> "Import" | As -> "As" | Type -> "Type" | Mut -> "Mut"
     | Let -> "Let" | Rec -> "Rec" | If -> "If" | Then -> "Then" | Else -> "Else" | Fn -> "Fn"
     | Semi -> "Semi" | Colon -> "Colon" | DColon -> "DColon" | Comma -> "Comma"
     | Dot -> "Dot" | Null -> "Null" | Unit -> "Unit" | Vertical -> "Vertical"

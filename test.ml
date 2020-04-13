@@ -24,12 +24,12 @@ let lexer_test_text = "
     /* nest */
 */
 
-/*  6 */ identifier Ident 12345
+/*  6 */ identifier Ident 12345 'b
 /*  7 */ 'a' '\\t' \"abc\\n\"
 
 // comment
 
-/* 11 */ module import as let if then else fn
+/* 11 */ module import as let if then else fn type mut
 /* 12 */ ; : :: , . [] | ? = || && == != < <= > >= + - * / % ! ()
 /* 13 */ { } ( ) [ ] -> ,= ++ =/=
 "
@@ -39,7 +39,8 @@ let lexer_test_tokens = [
     (Id "identifier", {filename="test";line=6;col=10});
     (CId "Ident", {filename="test";line=6;col=21});
     (Lit (Int 12345), {filename="test";line=6;col=27});
-    (Newline, {filename="test";line=6;col=32});
+    (TId 1, {filename="test";line=6;col=33});
+    (Newline, {filename="test";line=6;col=35});
     (Lit (Char 'a'), {filename="test";line=7;col=10});
     (Lit (Char '\t'), {filename="test";line=7;col=14});
     (Lit (String "abc\n"), {filename="test";line=7;col=19});
@@ -53,7 +54,9 @@ let lexer_test_tokens = [
     (Then, {filename="test";line=11;col=34});
     (Else, {filename="test";line=11;col=39});
     (Fn, {filename="test";line=11;col=44});
-    (Newline, {filename="test";line=11;col=46});
+    (Type, {filename="test";line=11;col=47});
+    (Mut, {filename="test";line=11;col=52});
+    (Newline, {filename="test";line=11;col=55});
     (Semi, {filename="test";line=12;col=10});
     (Colon, {filename="test";line=12;col=12});
     (DColon, {filename="test";line=12;col=14});

@@ -4,13 +4,41 @@ program
 decl
     = module
     | import
+    | type_def
     | id_def
 module
     = MODULE CID
 import
     = IMPORT CID [AS CID]
+type_def
+    = TYPE type_decl
 id_def
     = ID {params} '=' expr
+
+type_decl
+    = [type_params] ID ['=' type_representation]
+type_params
+    = TVAR
+    | '(' TVAR {',' TVAR} ')'
+type_representation
+    = constr_decl {'|' constr_decl }
+    | '{' field_decl ';' {field_decl ';'} '}'
+    | typexpr
+constr_decl
+    = CID [typexpr {'*' typexpr}]
+field_decl
+    = [MUT] ID ':" typexpr
+typexpr
+    = TVAR
+    | '(' typexpr ')'
+    | typexpr {'->' typexpr}
+    | typexpr {'*' typexpr}
+    | typeconstr
+    | typexpr typeconstr
+    | '(' typexpr {',' typexpr} ')' typeconstr
+
+typeconstr
+    = {CID '.'} ID
 
 expr
     = let_expr

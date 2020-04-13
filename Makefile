@@ -1,17 +1,14 @@
-PROGRAM = wktk
+SRC = env.ml syntax.ml symbol.ml lexer.ml parser.ml eval.ml type.ml builtins.ml test.ml wktk.ml
 
-all : byte
+all : wktk
 
-test : byte
-	ocamlrun $(PROGRAM).byte -t
+wktk : $(SRC)
+	ocamlopt -o $@ $^
+
+test : wktk
+	./wktk -t
 
 clean:
-	ocamlbuild -clean
-
-native:
-	ocamlbuild $(PROGRAM).native
-
-byte:
-	ocamlbuild $(PROGRAM).byte
+	rm -f *.cmi *.cmx *.cmo *.o wktk
 
 

@@ -76,10 +76,18 @@ let lexer filename text =
         | ch -> (ch, next lex)
     in
     let lex_char lex =
+        let is_alpha = function 'a'..'z' -> true | _ -> false in
+        let char_to_int c = Char.code c - Char.code 'a' in
         let (c, lex) = get_char lex in
-        if peek lex <> '\'' then
-            error lex.pos "missing single-quote";
-        (Lit (Char c), next lex)
+        if is_alpha c then
+            if peek lex = '\'' then
+                (Lit (Char c), next lex)
+            else
+                (TId (char_to_int c), lex)
+        else if peek lex <> '\'' then
+            error lex.pos "missing single-quote"
+        else
+            (Lit (Char c), next lex)
     in
     let lex_string lex =
         let buffer = Buffer.create 10 in
@@ -160,7 +168,7 @@ let lexer filename text =
             | 'a'..'z' | '_' ->
                 let (id, lex) = lex_ident lex in
                 let t = match id with
-                    | "module" -> Module | "import" -> Import | "as" -> As
+                    | "module" -> Module | "import" -> Import | "as" -> As | "type" -> Type | "mut" -> Mut
                     | "let" -> Let | "rec" -> Rec | "if" -> If | "then" -> Then | "else" -> Else
                     | "fn" -> Fn | _ -> Id id
                 in

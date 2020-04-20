@@ -475,6 +475,133 @@ and parse_id_def global pars =
     res
 
 (*
+typeconstr
+    = {CID '.'} ID
+*)
+let parse_typeconstr pars =
+    debug_parse_in @@ "parse_typeconstr: " ^ s_token_src_list pars.toks;
+    let res =
+        (*TODO*)
+        (TUnit, get_pos pars)
+    in
+    debug_parse_out @@ "parse_typeconstr: " ^ s_typ_src @@ fst res;
+    res
+
+(*
+typexpr_primary
+    = INT | CHAR | UNIT | BOOL | STRING | TVAR | typeconstr | '(' typexpr ')'
+*)
+let rec parse_typexpr_primary pars =
+    debug_parse_in @@ "parse_typexpr_primary: " ^ s_token_src_list pars.toks;
+    let pos = get_pos pars in
+    let res =
+        match peek_token pars with
+        | Id "unit" -> next_token pars; (TUnit, pos)
+        | Id "bool" -> next_token pars; (TBool, pos)
+        | Id "int" -> next_token pars; (TInt, pos)
+        | Id "char" -> next_token pars; (TChar, pos)
+        | Id "float" -> next_token pars; (TFloat, pos)
+        | Id "string" -> next_token pars; (TString, pos)
+        | TId n -> next_token pars; (TVar (n, ref None), pos)
+        | Id _ | CId _ -> parse_typeconstr pars
+        | LParen ->
+            next_token pars;
+            let (tye, pos) = parse_typexpr pars in
+            expect pars RParen;
+            (tye, pos)
+        | _ -> parse_error pars "type expression syntax error"
+    in
+    debug_parse_out @@ "parse_typexpr_primary: " ^ s_typ_src @@ fst res;
+    res
+
+(*
+typexpr_ctor
+    = typexpr_primary {typeconstr}
+*)
+and parse_typexpr_ctor pars =
+    debug_parse_in @@ "parse_typexpr_ctor: " ^ s_token_src_list pars.toks;
+    let (lhs, pos) = parse_typexpr_primary pars in
+    let rec loop pars lhs =
+        match peek_token pars with
+        | Id _ | CId _ ->
+            let (rhs, pos) = parse_typeconstr pars in
+            TConstr (lhs, rhs)
+        | _ -> lhs
+    in
+    let res = (loop pars lhs, pos) in
+    debug_parse_out @@ "parse_typexpr_ctor: " ^ s_typ_src @@ fst res;
+    res
+
+
+(*
+typexpr_tuple
+    = typexpr_ctor {'*' typexpr_ctor}
+*)
+and parse_typexpr_tuple pars =
+    debug_parse_in @@ "parse_typexpr_tuple: " ^ s_token_src_list pars.toks;
+    let rec loop pars ts =
+        match peek_token pars with
+        | Star ->
+            next_token pars;
+            skip_newline pars;
+            let (t, _) = parse_typexpr_ctor pars in
+            loop pars (t :: ts)
+        | _ -> List.rev ts
+    in
+    let res =
+        let (tye, pos) = parse_typexpr_ctor pars in
+        let tys = loop pars [tye] in
+        match List.length tys with
+        | 1 -> (tye, pos)
+        | _ -> (TTuple tys, pos)
+    in
+    debug_parse_out @@ "parse_typexpr_tuple: " ^ s_typ_src @@ fst res;
+    res
+
+(*
+typexpr
+    = typexpr_tuple ['->' typexpr]
+*)
+and parse_typexpr pars =
+    debug_parse_in @@ "parse_typexpr: " ^ s_token_src_list pars.toks;
+    let res =
+        let (tye, pos) = parse_typexpr_tuple pars in
+        match peek_token pars with
+        | RArrow ->
+            next_token pars;
+            skip_newline pars;
+            let (tyr, pos) = parse_typexpr pars in
+            (TFun (tye, tyr), pos)
+        | _ -> (tye, pos)
+    in
+    debug_parse_out @@ "parse_typexpr: " ^ s_typ_src @@ fst res;
+    res
+
+(*
+type_def
+    = TYPE type_decl
+type_decl
+    = ID ['=' typexpr]
+*)
+let parse_type_def pars =
+    debug_parse_in @@ "parse_type_def: " ^ s_token_src_list pars.toks;
+    let res =
+        next_token pars;
+        skip_newline pars;
+        match peek_token pars with
+        | Id id ->
+            next_token pars;
+            expect pars Eq;
+            skip_newline pars;
+            let (tye, pos) = parse_typexpr pars in
+            make_expr (ETypeDef (id, tye)) pos
+        | _ -> parse_error pars "syntax error"
+    in
+    debug_parse_out @@ "parse_type_def: " ^ s_expr_src res;
+    res
+
+
+(*
 import
     = IMPORT CID [AS CID]
 *)
@@ -523,6 +650,7 @@ let parse_module pars =
 decl
     = module
     | import
+    | type_def
     | id_def
 *)
 let parse_decl pars =
@@ -531,6 +659,7 @@ let parse_decl pars =
         match peek_token pars with
         | Module -> parse_module pars
         | Import -> parse_import pars
+        | Type -> parse_type_def pars
         | Id _ -> parse_id_def true pars
         | Eof -> make_expr EUnit (get_pos pars)
         | _ -> parse_error pars "syntax error (expect identifier)"
@@ -561,6 +690,7 @@ let parse_program pars =
 top_level
     = module
     | import
+    | type_def
     | expr
 *)
 let parse_top_level toks =
@@ -570,6 +700,7 @@ let parse_top_level toks =
         match peek_token pars with
         | Module -> parse_module pars
         | Import -> parse_import pars
+        | Type -> parse_type_def pars
         | Eof -> make_expr EUnit (get_pos pars)
         | _ -> parse_expr pars
     in

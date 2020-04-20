@@ -11,4 +11,3 @@ test : wktk
 clean:
 	rm -f *.cmi *.cmx *.cmo *.o wktk
 
-

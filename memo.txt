@@ -47,3 +47,4 @@ lexer text = {
     }
     get_tokens (init_lex text) []
 }
+

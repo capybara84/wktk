@@ -29,14 +29,13 @@ constr_decl
 field_decl
     = [MUT] ID ':" typexpr
 typexpr
-    = TVAR
-    | '(' typexpr ')'
-    | typexpr {'->' typexpr}
-    | typexpr {'*' typexpr}
-    | typeconstr
-    | typexpr typeconstr
-    | '(' typexpr {',' typexpr} ')' typeconstr
-
+    = typexpr_tuple ['->' typexpr]
+typexpr_tuple
+    = typexpr_ctor {'*' typexpr_ctor}
+typexpr_ctor
+    = ( '(' typexpr {',' typexpr} ')' | typexpr_primary ) [typeconstr]
+typexpr_primary
+    = INT | CHAR | UNIT | BOOL | STRING | TVAR | typeconstr
 typeconstr
     = {CID '.'} ID
 

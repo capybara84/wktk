@@ -23,10 +23,13 @@ type typ =
     | TTuple of typ list | TList of typ
     | TFun of typ * typ
     | TVar of int * typ option ref
+    | TConstr of typ * typ
+    | TAlias of string * typ
 and type_schema = {
     vars : int list;
     body : typ;
 }
+
 
 type binop = BinAdd | BinSub | BinMul | BinDiv | BinMod | BinLT | BinLE | BinGT | BinGE
     | BinEql | BinNeq | BinLOr | BinLAnd | BinCons | BinOp of string
@@ -49,9 +52,7 @@ type expr_decl =
     | ESeq of expr list
     | EModule of string
     | EImport of string * string option
-(* TODO
-    | ETypeDef of int list * string * typ 
-*)
+    | ETypeDef of string * typ 
 
 and expr = expr_decl * source_pos
 
@@ -154,6 +155,12 @@ let s_typ ty =
                 (5, "'" ^ int_to_alpha y)
             | TVar (_, {contents = Some t}) ->
                 (3, to_s n t)
+            | TConstr (t1, t2) ->
+                let s1 = to_s 1 t1 in
+                let s2 = to_s 0 t2 in
+                (3, s1 ^ " " ^ s2)
+            | TAlias (aid, _) ->
+                (3, aid)
         in
         if m > n then str
         else "(" ^ str ^ ")"
@@ -175,6 +182,12 @@ let s_typ_raw ty =
                 (5, "'" ^ string_of_int x)
             | TVar (_, {contents = Some t}) ->
                 (3, to_s n t ^ "!")
+            | TConstr (t1, t2) ->
+                let s1 = to_s 1 t1 in
+                let s2 = to_s 0 t2 in
+                (3, s1 ^ " " ^ s2)
+            | TAlias (aid, t) ->
+                (3, aid ^ "(" ^ to_s (-1) t ^ ")")
         in
         if m > n then str
         else "(" ^ str ^ ")"
@@ -195,17 +208,18 @@ let rec s_expr = function
     | (ELit l, _) -> s_lit l | (EId s, _) -> s | (EModId (ml, s), _) -> s_list id "." ml ^ "." ^ s
     | (ETuple el, _) -> "(" ^ s_list s_expr ", " el ^ ")"
     | (EParen e, _) -> "(" ^ s_expr e ^ ")"
-    | (EUnary (op, e), _) -> "(unary '" ^ s_unop op ^ "' " ^ s_expr e ^ ")"
-    | (EBinary (op, l, r), _) -> "(binary '" ^ s_binop op ^ "' " ^ s_expr l ^ " " ^ s_expr r ^ ")"
-    | (ECond (c, t, e), _) -> "(cond " ^ s_expr c ^ " then " ^ s_expr t ^ " else " ^ s_expr e ^ ")"
-    | (ELambda (a, b), _) -> "(lambda " ^ s_expr a ^ " -> " ^ s_expr b ^ ")"
-    | (EApply (f, a), _) -> "(apply " ^ s_expr f ^ " " ^ s_expr a ^ ")"
-    | (ELet (s, e), _) -> "(let " ^ s ^ " = " ^ s_expr e ^ ")"
-    | (ELetRec (s, e), _) -> "(letrec " ^ s ^ " = " ^ s_expr e ^ ")"
+    | (EUnary (op, e), _) -> s_unop op ^ s_expr e
+    | (EBinary (op, l, r), _) -> s_expr l ^ " " ^ s_binop op ^ " " ^ s_expr r
+    | (ECond (c, t, e), _) -> "(" ^ s_expr c ^ ") ? " ^ s_expr t ^ " : " ^ s_expr e
+    | (ELambda (a, b), _) -> "fn " ^ s_expr a ^ " -> " ^ s_expr b 
+    | (EApply (f, a), _) -> s_expr f ^ " " ^ s_expr a
+    | (ELet (s, e), _) -> "let " ^ s ^ " = " ^ s_expr e
+    | (ELetRec (s, e), _) -> "let rec " ^ s ^ " = " ^ s_expr e
     | (ESeq el, _) -> "{ " ^ s_exprlist "; " el ^ " }"
-    | (EModule mid, _) -> "(module " ^ mid ^ ")"
-    | (EImport (mid, None), _) -> "(import " ^ mid ^ ")"
-    | (EImport (mid, Some aid), _) -> "(import " ^ mid ^ " as " ^ aid ^ ")"
+    | (EModule mid, _) -> "module " ^ mid
+    | (EImport (mid, None), _) -> "import " ^ mid
+    | (EImport (mid, Some aid), _) -> "import " ^ mid ^ " as " ^ aid
+    | (ETypeDef (tid, ty), _) -> "type " ^ tid ^ " = " ^ s_typ ty
 and s_exprlist sep = s_list s_expr sep
 
 let rec str_of = function
@@ -274,6 +288,33 @@ let s_token_src = function
 
 let s_token_src_list toks = "[" ^ s_list (fun (x, _) -> s_token_src x) "; " toks ^ "]"
 
+let s_typ_src ty =
+    let rec to_s n ty =
+        let (m, str) =
+            match ty with
+            | TUnit -> (5, "TUnit") | TBool -> (5, "TBool") | TInt -> (5, "TInt") | TChar -> (5, "TChar")
+            | TFloat -> (5, "TFloat") | TString -> (5, "TString")
+            | TTuple tl -> (3, "TTuple (" ^ s_list (to_s 4) ", " tl ^ ")")
+            | TList t -> (3, "TList " ^ to_s 0 t)
+            | TFun (t1, t2) ->
+                let s1 = to_s 1 t1 in
+                let s2 = to_s 0 t2 in
+                (1, "TFun (" ^ s1 ^ ", " ^ s2 ^ ")")
+            | TVar (x, {contents = None}) ->
+                (5, "TVar (" ^ string_of_int x ^ ", None)")
+            | TVar (x, {contents = Some t}) ->
+                (3, "TVar (" ^ string_of_int x ^ ", Some " ^ to_s n t)
+            | TConstr (t1, t2) ->
+                let s1 = to_s 1 t1 in
+                let s2 = to_s 0 t2 in
+                (3, "TConstr (" ^ s1 ^ ", " ^ s2 ^ ")")
+            | TAlias (aid, t) ->
+                (3, "TAlias (" ^ quote aid ^ ", " ^ to_s (-1) t ^ ")")
+        in
+        if m > n then str
+        else "(" ^ str ^ ")"
+    in to_s (-1) ty
+
 let s_binop_src = function
     | BinAdd -> "BinAdd" | BinSub -> "BinSub" | BinMul -> "BinMul" | BinDiv -> "BinDiv" | BinMod -> "BinMod"
     | BinLT -> "BinLT" | BinLE -> "BinLE" | BinGT -> "BinGT" | BinGE -> "BinGE" | BinEql -> "BinEql"
@@ -298,6 +339,7 @@ let rec s_expr_src = function
     | (EModule mid, _) -> "(EModule " ^ quote mid ^ ")"
     | (EImport (mid, None), _) -> "(EImport (" ^ quote mid ^ ", None))"
     | (EImport (mid, Some aid), _) -> "(EImport (" ^ quote mid ^ ", Some " ^ quote aid ^ "))"
+    | (ETypeDef (tid, ty), _) -> "(ETypeDef (" ^ quote tid ^ ", " ^ s_typ_src ty ^ "))"
 and s_exprlist_src el = "[" ^ s_list s_expr_src "; " el ^ "]"
 
 let rec s_value_src = function

@@ -409,6 +409,11 @@ let rec infer tenv e =
             debug_type @@ "infer import " ^ mid ^ (match aid with None -> "" | Some id -> " as " ^ id);
             load_module mid aid;
             (tenv, TUnit)
+        | (ETypeDef (tid, ty), _) ->
+            debug_type @@ "infer type " ^ tid ^ " = " ^ s_typ ty;
+            (*TODO*)
+            (tenv, TUnit)
+
     in
     debug_type_out @@ "infer = " ^ s_typ_raw (snd res);
     res

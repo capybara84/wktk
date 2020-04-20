@@ -1,3 +1,8 @@
+ETypeDef で typ を使っているが、
+パースしながら型テーブルを参照しないといけなくなる。
+（構文解析とシンボルテーブルが分離できなくなる）
+ので、やっぱやめて、expr_declに型定義を含めたい
+
 - tuple
     - param
     * value
@@ -5,6 +10,9 @@
 * module
     - module path
 - type decl
+    < とりあえず、aliasから。type i = intみたいなの。
+    型定義だけした。TAlias
+    パーサーをつくろう。
 - record
 - variant
 - pattern

@@ -481,10 +481,16 @@ typeconstr
 let parse_typeconstr pars =
     debug_parse_in @@ "parse_typeconstr: " ^ s_token_src_list pars.toks;
     let res =
-        (*TODO*)
-        (TUnit, get_pos pars)
+        match peek_token pars with
+        | Id id ->
+            next_token pars;
+            (EName id, get_pos pars)
+        (*TODO
+        | CId id ->
+        *)
+        | _ -> parse_error pars "type constructor syntax error"
     in
-    debug_parse_out @@ "parse_typeconstr: " ^ s_typ_src @@ fst res;
+    debug_parse_out @@ "parse_typeconstr: " ^ s_typ_expr_src @@ fst res;
     res
 
 (*
@@ -496,13 +502,13 @@ let rec parse_typexpr_primary pars =
     let pos = get_pos pars in
     let res =
         match peek_token pars with
-        | Id "unit" -> next_token pars; (TUnit, pos)
-        | Id "bool" -> next_token pars; (TBool, pos)
-        | Id "int" -> next_token pars; (TInt, pos)
-        | Id "char" -> next_token pars; (TChar, pos)
-        | Id "float" -> next_token pars; (TFloat, pos)
-        | Id "string" -> next_token pars; (TString, pos)
-        | TId n -> next_token pars; (TVar (n, ref None), pos)
+        | Id "unit" -> next_token pars; (EName "unit", pos)
+        | Id "bool" -> next_token pars; (EName "bool", pos)
+        | Id "int" -> next_token pars; (EName "int", pos)
+        | Id "char" -> next_token pars; (EName "char", pos)
+        | Id "float" -> next_token pars; (EName "float", pos)
+        | Id "string" -> next_token pars; (EName "string", pos)
+        | TId n -> next_token pars; (EVar n, pos)
         | Id _ | CId _ -> parse_typeconstr pars
         | LParen ->
             next_token pars;
@@ -511,7 +517,7 @@ let rec parse_typexpr_primary pars =
             (tye, pos)
         | _ -> parse_error pars "type expression syntax error"
     in
-    debug_parse_out @@ "parse_typexpr_primary: " ^ s_typ_src @@ fst res;
+    debug_parse_out @@ "parse_typexpr_primary: " ^ s_typ_expr_src @@ fst res;
     res
 
 (*
@@ -525,11 +531,11 @@ and parse_typexpr_ctor pars =
         match peek_token pars with
         | Id _ | CId _ ->
             let (rhs, pos) = parse_typeconstr pars in
-            TConstr (lhs, rhs)
+            EConstr (lhs, rhs)
         | _ -> lhs
     in
     let res = (loop pars lhs, pos) in
-    debug_parse_out @@ "parse_typexpr_ctor: " ^ s_typ_src @@ fst res;
+    debug_parse_out @@ "parse_typexpr_ctor: " ^ s_typ_expr_src @@ fst res;
     res
 
 
@@ -553,9 +559,9 @@ and parse_typexpr_tuple pars =
         let tys = loop pars [tye] in
         match List.length tys with
         | 1 -> (tye, pos)
-        | _ -> (TTuple tys, pos)
+        | _ -> (ETuple tys, pos)
     in
-    debug_parse_out @@ "parse_typexpr_tuple: " ^ s_typ_src @@ fst res;
+    debug_parse_out @@ "parse_typexpr_tuple: " ^ s_typ_expr_src @@ fst res;
     res
 
 (*
@@ -565,16 +571,16 @@ typexpr
 and parse_typexpr pars =
     debug_parse_in @@ "parse_typexpr: " ^ s_token_src_list pars.toks;
     let res =
-        let (tye, pos) = parse_typexpr_tuple pars in
+        let (tyd, pos) = parse_typexpr_tuple pars in
         match peek_token pars with
         | RArrow ->
             next_token pars;
             skip_newline pars;
             let (tyr, pos) = parse_typexpr pars in
-            (TFun (tye, tyr), pos)
-        | _ -> (tye, pos)
+            (EFun (tyd, tyr), pos)
+        | _ -> (tyd, pos)
     in
-    debug_parse_out @@ "parse_typexpr: " ^ s_typ_src @@ fst res;
+    debug_parse_out @@ "parse_typexpr: " ^ s_typ_expr_src @@ fst res;
     res
 
 (*
@@ -582,6 +588,7 @@ type_def
     = TYPE type_decl
 type_decl
     = ID ['=' typexpr]
+    TODO
 *)
 let parse_type_def pars =
     debug_parse_in @@ "parse_type_def: " ^ s_token_src_list pars.toks;
@@ -594,7 +601,7 @@ let parse_type_def pars =
             expect pars Eq;
             skip_newline pars;
             let (tye, pos) = parse_typexpr pars in
-            make_expr (ETypeDef (id, tye)) pos
+            make_expr (ETypeDef ([], id, EAlias tye)) pos
         | _ -> parse_error pars "syntax error"
     in
     debug_parse_out @@ "parse_type_def: " ^ s_expr_src res;

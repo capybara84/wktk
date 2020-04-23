@@ -230,6 +230,25 @@ let default_directory = "./"
 let make_module_filename name =
     default_directory ^ String.uncapitalize_ascii name ^ default_extension
 
+let rec infer_typ_expr = function
+    | EName "unit" -> TUnit
+    | EName "bool" -> TBool
+    | EName "int" -> TInt
+    | EName "char" -> TChar
+    | EName "float" -> TFloat
+    | EName "string" -> TString
+    | EName id -> TName id
+    | EVar n -> TVar (n, ref None)
+    | ETuple tl -> TTuple (List.map infer_typ_expr tl)
+    | EFun (t1, t2) -> TFun (infer_typ_expr t1, infer_typ_expr t2)
+    | EConstr (t, EName "list") -> TList (infer_typ_expr t)
+    | EConstr (t, s) -> TConstr (infer_typ_expr t, infer_typ_expr s)
+
+
+let infer_typ_decl = function
+    | EAlias te -> infer_typ_expr te
+    | ERecord _ -> TUnit (*TODO*)
+    | EVariant _ -> TUnit (*TODO*)
 
 let rec infer tenv e =
     debug_type_in @@ "infer: " ^ s_expr e;
@@ -409,9 +428,11 @@ let rec infer tenv e =
             debug_type @@ "infer import " ^ mid ^ (match aid with None -> "" | Some id -> " as " ^ id);
             load_module mid aid;
             (tenv, TUnit)
-        | (ETypeDef (tid, ty), _) ->
-            debug_type @@ "infer type " ^ tid ^ " = " ^ s_typ ty;
-            (*TODO*)
+        | (ETypeDef (_, tid, td), _) ->
+            debug_type @@ "infer type " ^ tid ^ " = " ^ s_typ_decl td;
+            let t = infer_typ_decl td in
+            let ts = create_poly_type t in
+            let tenv = Env.extend tid (ref ts) tenv in
             (tenv, TUnit)
 
     in

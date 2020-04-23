@@ -178,11 +178,11 @@ let parser_test_texts = [
     ("import A as B",           "[(EImport (\"A\", Some \"B\"))]");
     ("_ = A.b",                 "[(ELetRec (\"_\", (EModId ([\"A\"],\"b\"))))]");
     ("_ = A.B.c",               "[(ELetRec (\"_\", (EModId ([\"A\";\"B\"],\"c\"))))]");
-    ("type integer = int",      "[(ETypeDef (\"integer\", TInt))]");
-    ("type f = char -> int",    "[(ETypeDef (\"f\", TFun (TChar, TInt)))]");
+    ("type integer = int",      "[(ETypeDef ([], \"integer\", EAlias (EName \"int\")))]");
+    ("type f = char -> int",    "[(ETypeDef ([], \"f\", EAlias (EFun ((EName \"char\"), (EName \"int\")))))]");
     ("type t = int * char * (bool * int * string)",
-                                "[(ETypeDef (\"t\", TTuple (TInt, TChar, (TTuple (TBool, TInt, TString)))))]");
-    ("type str = char array",   "[(ETypeDef (\"str\", TConstr (TChar, TAlias (\"array\", TUnit))))]");
+        "[(ETypeDef ([], \"t\", EAlias (ETuple [(EName \"int\"); (EName \"char\"); (ETuple [(EName \"bool\"); (EName \"int\"); (EName \"string\")])])))]");
+    ("type str = char array",   "[(ETypeDef ([], \"str\", EAlias (EConstr ((EName \"char\"), (EName \"array\")))))]");
 ]
 
 let parser_test verbose =

@@ -20,16 +20,27 @@ type token = token_decl * source_pos
 
 type typ =
     | TUnit | TBool | TInt | TChar | TFloat | TString
+    | TName of string
     | TTuple of typ list | TList of typ
     | TFun of typ * typ
     | TVar of int * typ option ref
     | TConstr of typ * typ
-    | TAlias of string * typ
 and type_schema = {
     vars : int list;
     body : typ;
 }
 
+type typ_expr =
+    | EName of string
+    | EVar of int
+    | ETuple of typ_expr list
+    | EFun of typ_expr * typ_expr
+    | EConstr of typ_expr * typ_expr
+
+type typ_decl =
+    | EAlias of typ_expr
+    | ERecord of (string * bool * typ_expr) list
+    | EVariant of (string * typ_expr option) list
 
 type binop = BinAdd | BinSub | BinMul | BinDiv | BinMod | BinLT | BinLE | BinGT | BinGE
     | BinEql | BinNeq | BinLOr | BinLAnd | BinCons | BinOp of string
@@ -52,7 +63,7 @@ type expr_decl =
     | ESeq of expr list
     | EModule of string
     | EImport of string * string option
-    | ETypeDef of string * typ 
+    | ETypeDef of int list * string * typ_decl
 
 and expr = expr_decl * source_pos
 
@@ -138,6 +149,7 @@ let s_typ ty =
             match ty with
             | TUnit -> (5, "unit") | TBool -> (5, "bool") | TInt -> (5, "int") | TChar -> (5, "char")
             | TFloat -> (5, "float") | TString -> (5, "string")
+            | TName id -> (5, id)
             | TTuple tl -> (3, s_list (to_s 4) " * " tl)
             | TList t -> (3, to_s 0 t ^ " list")
             | TFun (t1, t2) ->
@@ -159,8 +171,6 @@ let s_typ ty =
                 let s1 = to_s 1 t1 in
                 let s2 = to_s 0 t2 in
                 (3, s1 ^ " " ^ s2)
-            | TAlias (aid, _) ->
-                (3, aid)
         in
         if m > n then str
         else "(" ^ str ^ ")"
@@ -172,6 +182,7 @@ let s_typ_raw ty =
             match ty with
             | TUnit -> (5, "unit") | TBool -> (5, "bool") | TInt -> (5, "int") | TChar -> (5, "char")
             | TFloat -> (5, "float") | TString -> (5, "string")
+            | TName id -> (5, id)
             | TTuple tl -> (3, s_list (to_s 4) " * " tl)
             | TList t -> (3, to_s 0 t ^ " list")
             | TFun (t1, t2) ->
@@ -186,8 +197,6 @@ let s_typ_raw ty =
                 let s1 = to_s 1 t1 in
                 let s2 = to_s 0 t2 in
                 (3, s1 ^ " " ^ s2)
-            | TAlias (aid, t) ->
-                (3, aid ^ "(" ^ to_s (-1) t ^ ")")
         in
         if m > n then str
         else "(" ^ str ^ ")"
@@ -195,6 +204,22 @@ let s_typ_raw ty =
 
 let s_type_schema ts =
     "{ vars:[" ^ s_list string_of_int "," ts.vars ^ "], body:" ^ s_typ_raw ts.body ^ " }"
+
+
+let rec s_typ_expr = function
+    | EName s -> s
+    | EVar n -> "'" ^ int_to_alpha n
+    | ETuple tl -> "(" ^ s_list s_typ_expr " * " tl ^ ")"
+    | EFun (t1, t2) -> "(" ^ s_typ_expr t1 ^ " -> " ^ s_typ_expr t2 ^ ")"
+    | EConstr (t, s) -> "(" ^ s_typ_expr t ^ " " ^ s_typ_expr s ^ ")"
+
+let s_typ_decl_record _ = ""    (*TODO*)
+let s_typ_decl_variant _ = ""   (*TODO*)
+
+let s_typ_decl = function
+    | EAlias te -> s_typ_expr te
+    | ERecord rl -> s_typ_decl_record rl
+    | EVariant vl -> s_typ_decl_variant vl
 
 let s_binop = function
     | BinAdd -> "+" | BinSub -> "-" | BinMul -> "*" | BinDiv -> "/" | BinMod -> "%"
@@ -219,8 +244,18 @@ let rec s_expr = function
     | (EModule mid, _) -> "module " ^ mid
     | (EImport (mid, None), _) -> "import " ^ mid
     | (EImport (mid, Some aid), _) -> "import " ^ mid ^ " as " ^ aid
-    | (ETypeDef (tid, ty), _) -> "type " ^ tid ^ " = " ^ s_typ ty
+    | (ETypeDef (params, tid, td), _) -> "type" ^ s_params params  ^ " " ^ tid ^ " = " ^ s_typ_decl td
 and s_exprlist sep = s_list s_expr sep
+and s_params ps =
+    let rec aux = function
+        | [] -> ""
+        | [x] -> "'" ^ int_to_alpha x
+        | x::xs -> "'" ^ int_to_alpha x ^ " " ^ s_params xs
+    in match ps with
+        | [] -> ""
+        | [x] -> " " ^ aux ps
+        | _ -> " (" ^ aux ps ^ ")"
+
 
 let rec str_of = function
     | VUnit -> "()"
@@ -294,6 +329,7 @@ let s_typ_src ty =
             match ty with
             | TUnit -> (5, "TUnit") | TBool -> (5, "TBool") | TInt -> (5, "TInt") | TChar -> (5, "TChar")
             | TFloat -> (5, "TFloat") | TString -> (5, "TString")
+            | TName id -> (5, "TName " ^ id)
             | TTuple tl -> (3, "TTuple (" ^ s_list (to_s 4) ", " tl ^ ")")
             | TList t -> (3, "TList " ^ to_s 0 t)
             | TFun (t1, t2) ->
@@ -308,12 +344,25 @@ let s_typ_src ty =
                 let s1 = to_s 1 t1 in
                 let s2 = to_s 0 t2 in
                 (3, "TConstr (" ^ s1 ^ ", " ^ s2 ^ ")")
-            | TAlias (aid, t) ->
-                (3, "TAlias (" ^ quote aid ^ ", " ^ to_s (-1) t ^ ")")
         in
         if m > n then str
         else "(" ^ str ^ ")"
     in to_s (-1) ty
+
+let rec s_typ_expr_src = function
+    | EName s -> "(EName " ^ quote s ^ ")"
+    | EVar n -> "(EVar " ^ string_of_int n ^ ")"
+    | ETuple tl -> "(ETuple [" ^ s_list s_typ_expr_src "; " tl ^ "])"
+    | EFun (t1, t2) -> "(EFun (" ^ s_typ_expr_src t1 ^ ", " ^ s_typ_expr_src t2 ^ "))"
+    | EConstr (t, s) -> "(EConstr (" ^ s_typ_expr_src t ^ ", " ^ s_typ_expr_src s ^ "))"
+
+let s_typ_decl_record_src _ = ""    (*TODO*)
+let s_typ_decl_variant_src _ = ""   (*TODO*)
+
+let s_typ_decl_src = function
+    | EAlias te -> "EAlias " ^ s_typ_expr_src te
+    | ERecord rl -> "ERecord " ^ s_typ_decl_record_src rl
+    | EVariant vl -> "EVariant " ^ s_typ_decl_variant_src vl
 
 let s_binop_src = function
     | BinAdd -> "BinAdd" | BinSub -> "BinSub" | BinMul -> "BinMul" | BinDiv -> "BinDiv" | BinMod -> "BinMod"
@@ -339,7 +388,7 @@ let rec s_expr_src = function
     | (EModule mid, _) -> "(EModule " ^ quote mid ^ ")"
     | (EImport (mid, None), _) -> "(EImport (" ^ quote mid ^ ", None))"
     | (EImport (mid, Some aid), _) -> "(EImport (" ^ quote mid ^ ", Some " ^ quote aid ^ "))"
-    | (ETypeDef (tid, ty), _) -> "(ETypeDef (" ^ quote tid ^ ", " ^ s_typ_src ty ^ "))"
+    | (ETypeDef (params, tid, td), _) -> "(ETypeDef ([" ^ s_list string_of_int ";" params ^ "], " ^ quote tid ^ ", " ^ s_typ_decl_src td ^ "))"
 and s_exprlist_src el = "[" ^ s_list s_expr_src "; " el ^ "]"
 
 let rec s_value_src = function

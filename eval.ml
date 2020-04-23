@@ -265,8 +265,8 @@ let rec eval env e =
         | (EImport (mid, _), _) ->
             debug_eval @@ "eval import " ^ mid;
             (env, VUnit)
-        | (ETypeDef (tid, ty), _) ->
-            debug_eval @@ "eval typedef " ^ tid ^ " = " ^ s_typ ty;
+        | (ETypeDef (_, tid, td), _) ->
+            debug_eval @@ "eval typedef " ^ tid ^ " = " ^ s_typ_decl td;
             (env, VUnit)
     in
     debug_eval_out @@ "eval = " ^ s_value @@ snd res;

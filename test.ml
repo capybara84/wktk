@@ -182,7 +182,8 @@ let parser_test_texts = [
     ("type f = char -> int",    "[(ETypeDef ([], \"f\", EAlias (EFun ((EName \"char\"), (EName \"int\")))))]");
     ("type t = int * char * (bool * int * string)",
         "[(ETypeDef ([], \"t\", EAlias (ETuple [(EName \"int\"); (EName \"char\"); (ETuple [(EName \"bool\"); (EName \"int\"); (EName \"string\")])])))]");
-    ("type str = char array",   "[(ETypeDef ([], \"str\", EAlias (EConstr ((EName \"char\"), (EName \"array\")))))]");
+    ("type s = char array",   "[(ETypeDef ([], \"s\", EAlias (EConstr ((EName \"char\"), (EName \"array\")))))]");
+    ("type str = char list",   "[(ETypeDef ([], \"str\", EAlias (EConstr ((EName \"char\"), (EName \"list\")))))]");
 ]
 
 let parser_test verbose =

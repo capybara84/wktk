@@ -33,7 +33,7 @@ let new_list () =
     TList (new_tvar ())
 
 let new_type_schema ty =
-    { vars = []; body = ty }
+    { vars = []; body = ty; is_decl = false; }
 
 let is_list = function TList _ -> true | _ -> false
 
@@ -45,7 +45,7 @@ let rec equal t1 t2 =
     | (TTuple tl1, TTuple tl2) -> list_equal (tl1, tl2)
     | (TList t1, TList t2) -> equal t1 t2
     | (TFun (t11, t12), TFun (t21, t22)) ->
-        equal t11 t21 && equal t21 t22
+        equal t11 t21 && equal t12 t22
     | (TVar (n, {contents = None}), TVar (m, {contents = None})) ->
         n = m
     | (TVar (_, {contents = None}), _)
@@ -63,6 +63,39 @@ and list_equal = function
         if equal x y then
             list_equal (xs, ys)
         else false
+
+(* Reallocate tvar from 0 *)
+let convert_tvar t =
+    let seed = ref 0 in
+    let new_tvar () =
+        let ty = TVar (!seed, ref None) in
+        incr seed;
+        ty
+    in
+    let mappings = ref [] in
+    let rec conv t =
+        match t with
+        | TUnit | TBool | TInt | TChar | TFloat | TString | TName _ -> t
+        | TTuple tl -> TTuple (List.map conv tl)
+        | TList t -> TList (conv t)
+        | TFun (t1, t2) -> TFun (conv t1, conv t2)
+        | TConstr (t1, t2) -> TConstr (conv t1, conv t2)
+        | TVar (_, {contents = Some t}) -> TVar (0, ref (Some (conv t)))
+        | TVar (n, {contents = None}) ->
+            try
+                List.assoc n !mappings
+            with Not_found -> begin
+                let ty = new_tvar () in
+                mappings := (n, ty) :: !mappings;
+                ty
+            end
+    in
+    conv t
+
+let decl_equal t1 t2 =
+    let t1 = convert_tvar t1 in
+    let t2 = convert_tvar t2 in
+    equal t1 t2
 
 let rec unwrap_var free_vars = function
     | TTuple tl ->
@@ -90,9 +123,9 @@ and unwrap_tl_var free_vars new_tl = function
         let (free_vars, t) = unwrap_var free_vars x in
         unwrap_tl_var free_vars (t::new_tl) xs
 
-let create_poly_type ty =
+let create_poly_type ty is_decl =
     let (free_vars, unwrapped_type) = unwrap_var [] ty in
-    { vars = free_vars; body = unwrapped_type }
+    { vars = free_vars; body = unwrapped_type; is_decl = is_decl; }
 
 let create_alpha_equivalent ts =
     let rec fresh_vars res_vars res_map = function
@@ -112,15 +145,8 @@ let create_alpha_equivalent ts =
         | t -> t
     in
     let (new_vars, var_map) = fresh_vars [] [] ts.vars in
-    { vars = new_vars; body = subst var_map ts.body }
+    { vars = new_vars; body = subst var_map ts.body; is_decl = false; }
 
-
-let rec prune = function
-    | TVar (_, ({contents = Some t'} as instance)) ->
-        let inst = prune t' in
-        instance := Some inst;
-        inst
-    | t -> t
 
 let rec type_var_equal t1 t2 =
     match (t1, t2) with
@@ -131,6 +157,13 @@ let rec type_var_equal t1 t2 =
     | (_, TVar (_, {contents = Some t2'}))
         -> type_var_equal t1 t2'
     | _ -> false
+
+let rec prune = function
+    | TVar (_, ({contents = Some t'} as instance)) ->
+        let inst = prune t' in
+        instance := Some inst;
+        inst
+    | t -> t
 
 let rec occurs_in_type t t2 =
     let t2 = prune t2 in
@@ -394,19 +427,43 @@ let rec infer tenv e =
             let t = new_tvar () in
             unify t_fn (TFun (t_arg, t)) pos;
             (tenv, t)
-        | (ELet (id, e), _) ->
+        | (ELet (id, e), pos) ->
             debug_type @@ "infer let " ^ id ^ " = " ^ s_expr e;
-            let (_, t) = infer tenv e in
-            let ts = create_poly_type t in
-            let tenv = Env.extend id (ref ts) tenv in
-            (tenv, TUnit)
-        | (ELetRec (id, e), _) ->
+            (try
+                let ts = !(Env.lookup id tenv) in
+                if not ts.is_decl then
+                    error pos @@ id ^ " already defined"
+                else begin
+                    let (_, t) = infer tenv e in
+                    if not (decl_equal ts.body t) then
+                        error pos @@ "Type mismatch between " ^ s_typ ts.body ^ " on decl and " ^ s_typ t;
+                    (tenv, TUnit)
+                end
+            with Not_found ->
+                let (_, t) = infer tenv e in
+                let ts = create_poly_type t false in
+                let tenv = Env.extend id (ref ts) tenv in
+                (tenv, TUnit))
+        | (ELetRec (id, e), pos) ->
             debug_type @@ "infer letrec " ^ id ^ " = " ^ s_expr e;
-            let r = ref (new_type_schema (new_tvar ())) in
-            let tenv = Env.extend id r tenv in
-            let (_, t) = infer tenv e in
-            r := create_poly_type t;
-            (tenv, TUnit)
+            (try
+                let ts = !(Env.lookup id tenv) in
+                if not ts.is_decl then
+                    error pos @@ id ^ " already defined"
+                else begin
+                    let r = ref (new_type_schema (new_tvar ())) in
+                    let tenv' = Env.extend id r tenv in
+                    let (_, t) = infer tenv' e in
+                    if not (decl_equal ts.body t) then
+                        error pos @@ "Type mismatch between " ^ s_typ_raw ts.body ^ " on decl and " ^ s_typ_raw t;
+                    (tenv, TUnit)
+                end
+            with Not_found ->
+                let r = ref (new_type_schema (new_tvar ())) in
+                let tenv = Env.extend id r tenv in
+                let (_, t) = infer tenv e in
+                r := create_poly_type t false;
+                (tenv, TUnit))
         | (ESeq el, _) ->
             debug_type @@ "infer seq " ^ s_list s_expr "; " el;
             let rec loop tenv = function
@@ -431,10 +488,15 @@ let rec infer tenv e =
         | (ETypeDef (_, tid, td), _) ->
             debug_type @@ "infer type " ^ tid ^ " = " ^ s_typ_decl td;
             let t = infer_typ_decl td in
-            let ts = create_poly_type t in
+            let ts = create_poly_type t false in
             let tenv = Env.extend tid (ref ts) tenv in
             (tenv, TUnit)
-
+        | (EDecl (id, te), _) ->
+            debug_type @@ "infer decl " ^ id ^ " : " ^ s_typ_expr te;
+            let t = infer_typ_expr te in
+            let ts = create_poly_type t true in
+            let tenv = Env.extend id (ref ts) tenv in
+            (tenv, TUnit)
     in
     debug_type_out @@ "infer = " ^ s_typ_raw (snd res);
     res

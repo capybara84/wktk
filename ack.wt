@@ -1,3 +1,4 @@
+ack : int -> int -> int
 ack n m =
     if n == 0 then
         m+1
@@ -6,5 +7,8 @@ ack n m =
     else
         ack (n-1) (ack n (m-1))
 
-_ = puts ("ack 3 3 = " + sof (ack 3 3))
+_ = {
+    modules ()
+    puts ("ack 3 3 = " + sof (ack 3 3))
+}
 

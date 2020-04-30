@@ -1,0 +1,5 @@
+a : char
+a = 'a'
+//a = 1
+
+_ = modules ()

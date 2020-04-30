@@ -14,6 +14,7 @@ type_def
     = TYPE type_decl
 id_def
     = ID {params} '=' expr
+    | ID ':' typexpr
 
 type_decl
     = [type_params] ID ['=' type_representation]

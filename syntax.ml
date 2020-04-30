@@ -28,6 +28,7 @@ type typ =
 and type_schema = {
     vars : int list;
     body : typ;
+    is_decl : bool;
 }
 
 type typ_expr =
@@ -64,6 +65,7 @@ type expr_decl =
     | EModule of string
     | EImport of string * string option
     | ETypeDef of int list * string * typ_decl
+    | EDecl of string * typ_expr
 
 and expr = expr_decl * source_pos
 
@@ -203,7 +205,8 @@ let s_typ_raw ty =
     in to_s (-1) ty
 
 let s_type_schema ts =
-    "{ vars:[" ^ s_list string_of_int "," ts.vars ^ "], body:" ^ s_typ_raw ts.body ^ " }"
+    "{ vars:[" ^ s_list string_of_int "," ts.vars ^ "], body:" ^ s_typ_raw ts.body ^ " " ^
+        (if ts.is_decl then "decl " else "")  ^ " }"
 
 
 let rec s_typ_expr = function
@@ -245,6 +248,7 @@ let rec s_expr = function
     | (EImport (mid, None), _) -> "import " ^ mid
     | (EImport (mid, Some aid), _) -> "import " ^ mid ^ " as " ^ aid
     | (ETypeDef (params, tid, td), _) -> "type" ^ s_params params  ^ " " ^ tid ^ " = " ^ s_typ_decl td
+    | (EDecl (id, tye), _) -> "decl " ^ id ^ " : " ^ s_typ_expr tye
 and s_exprlist sep = s_list s_expr sep
 and s_params ps =
     let rec aux = function
@@ -389,6 +393,7 @@ let rec s_expr_src = function
     | (EImport (mid, None), _) -> "(EImport (" ^ quote mid ^ ", None))"
     | (EImport (mid, Some aid), _) -> "(EImport (" ^ quote mid ^ ", Some " ^ quote aid ^ "))"
     | (ETypeDef (params, tid, td), _) -> "(ETypeDef ([" ^ s_list string_of_int ";" params ^ "], " ^ quote tid ^ ", " ^ s_typ_decl_src td ^ "))"
+    | (EDecl (id, tye), _) -> "(EDecl (" ^ quote id ^ ", " ^ s_typ_expr_src tye ^ "))"
 and s_exprlist_src el = "[" ^ s_list s_expr_src "; " el ^ "]"
 
 let rec s_value_src = function

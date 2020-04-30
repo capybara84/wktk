@@ -268,6 +268,9 @@ let rec eval env e =
         | (ETypeDef (_, tid, td), _) ->
             debug_eval @@ "eval typedef " ^ tid ^ " = " ^ s_typ_decl td;
             (env, VUnit)
+        | (EDecl (id, te), _) ->
+            debug_eval @@ "eval decl " ^ id ^ " : " ^ s_typ_expr te;
+            (env, VUnit)
     in
     debug_eval_out @@ "eval = " ^ s_value @@ snd res;
     res

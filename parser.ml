@@ -450,6 +450,7 @@ and parse_params acc pars =
 (*
 id_def
     = ID {params} '=' expr
+    | ID ':' typexpr
 *)
 and parse_id_def global pars =
     debug_parse_in @@ "parse_id_def: " ^ s_token_src_list pars.toks;
@@ -458,16 +459,23 @@ and parse_id_def global pars =
         match peek_token pars with
         | Id id ->
             next_token pars;
-            let params = parse_params [] pars in
-            expect pars Eq;
-            skip_newline pars;
-            let body = parse_expr pars in
-            begin
-                match params with
-                | [] when not global -> make_expr (ELet (id, body)) pos
-                | [] when global -> make_expr (ELetRec (id, body)) pos
-                | _ -> 
-                    make_expr (ELetRec (id, List.fold_right (fun a b -> make_expr (ELambda (a, b)) pos) params body)) pos
+            if peek_token pars = Colon then begin
+                next_token pars;
+                skip_newline pars;
+                let (te, pos) = parse_typexpr pars in
+                make_expr (EDecl (id, te)) pos
+            end else begin
+                let params = parse_params [] pars in
+                expect pars Eq;
+                skip_newline pars;
+                let body = parse_expr pars in
+                begin
+                    match params with
+                    | [] when not global -> make_expr (ELet (id, body)) pos
+                    | [] when global -> make_expr (ELetRec (id, body)) pos
+                    | _ -> 
+                        make_expr (ELetRec (id, List.fold_right (fun a b -> make_expr (ELambda (a, b)) pos) params body)) pos
+                end
             end
         | _ -> failwith "id_def"
     in
@@ -478,7 +486,7 @@ and parse_id_def global pars =
 typeconstr
     = {CID '.'} ID
 *)
-let parse_typeconstr pars =
+and parse_typeconstr pars =
     debug_parse_in @@ "parse_typeconstr: " ^ s_token_src_list pars.toks;
     let res =
         match peek_token pars with
@@ -497,7 +505,7 @@ let parse_typeconstr pars =
 typexpr_primary
     = INT | CHAR | UNIT | BOOL | STRING | TVAR | typeconstr | '(' typexpr ')'
 *)
-let rec parse_typexpr_primary pars =
+and parse_typexpr_primary pars =
     debug_parse_in @@ "parse_typexpr_primary: " ^ s_token_src_list pars.toks;
     let pos = get_pos pars in
     let res =

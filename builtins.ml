@@ -97,6 +97,6 @@ and builtins_list =
 
 let init () =
     List.iter
-        (fun (name, ty, value) -> Symbol.insert_default name (Type.create_poly_type ty) value)
+        (fun (name, ty, value) -> Symbol.insert_default name (Type.create_poly_type ty false) value)
         builtins_list
 

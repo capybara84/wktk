@@ -1,0 +1,24 @@
+module
+    moduleの実装
+    importの実装
+type
+    named
+    decl
+record
+mutable の扱いを今はis_mutableにしているが、record { mutable contents } にしたい
+assignの型チェック
+
+list
+string
+tuple
+array
+record
+pattern match
+builtin function
+message
+
+-----
+*eval
+*type 型推論
+*parser
+*scanner インデントルールの実装

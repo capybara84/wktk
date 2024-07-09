@@ -68,6 +68,9 @@ let enter_new_env env =
 let leave_env env =
     !current_module.env <- env
 
+
+
+
 let set_module mid =
     verbose @@ "set_module: " ^ mid;
     try
@@ -84,6 +87,13 @@ let set_module mid =
         default_module.env <- (mid, sym) :: default_module.env
     end
 
+let insert_default mid id tys v ism =
+    if mid <> "" then
+        set_module mid;
+    let tysym = { tys = tys; is_mutable = ism } in
+    insert_tysym id tysym;
+    let sym = { v = v; is_mutable = ism } in
+    insert_sym id sym
 
 let init () =
     let tys = make_typ_scheme [] (TModule default_module_name) in

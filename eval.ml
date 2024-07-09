@@ -281,7 +281,7 @@ let rec eval e =
             res
         | (EModule mid, _) ->
             debug_print @@ "eval module " ^ mid;
-            (*TODO*)
+            Symbol.set_module mid;
             VUnit
         | (EImport (mid, aid), pos) ->
             debug_print @@ "eval import " ^ mid;

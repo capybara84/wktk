@@ -373,9 +373,7 @@ let rec infer e =
             infer_list el
         | (EModule mid, _) ->
             debug_print @@ "infer module " ^ mid;
-            (*
-            let modu = Symbol.set_module mid in
-            *)
+            Symbol.set_module mid;
             TUnit
         | (EImport (mid, aid), _) ->
             debug_print @@ "infer import " ^ mid;
@@ -392,7 +390,7 @@ and infer_let = function
     | [] -> ()
     | x::xs ->
         let t = infer x in
-        ignore t;(*TODO*)
+        ignore t;(*TODO 型は無視じゃなくて Unit かどうかを確認しないと*)
         infer_let xs
 
 and infer_list = function

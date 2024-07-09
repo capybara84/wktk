@@ -4,6 +4,7 @@ open Ast
 
 let rec repl () =
     try
+        Symbol.show_all_modules();
         print_string "> ";
         flush stdout;
         let txt = input_line stdin in
@@ -39,6 +40,7 @@ let load_source filename =
 
 let () =
     print_endline "wktk version 0.1";
+    Symbol.init ();
 
     let filenames = ref [] in
     let do_test = ref false in

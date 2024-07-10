@@ -23,6 +23,7 @@ let rec repl () =
 
 
 
+(*
 let load_source filename =
     verbose @@ "load_source '" ^ filename ^ "'";
     try
@@ -36,6 +37,7 @@ let load_source filename =
             print_endline @@ s_pos pos ^ "Error: " ^ msg; false
         | End_of_file -> (); true
         | Sys_error s -> print_endline s; false
+*)
 
 let () =
     print_endline "wktk version 0.1";
@@ -59,6 +61,8 @@ let () =
         ]
         (fun name -> filenames := name :: !filenames)
         "usage: wktk [-v][-ds][-dp][-dt][-de][-ns][-np][-nt][-ne] filename...";
+
+    ignore @@ Type.load_source "builtins.wt";
 
     if !do_test then
         Test.test ()

@@ -1,0 +1,50 @@
+
+module List
+
+// length : 'a list -> int
+length x =
+    x == [] ? 0 : 1 + length (tl x)
+
+// map : ('a -> 'b) -> 'a list -> 'b list
+map f x =
+    x == [] ? [] : f (hd x) :: map f (tl x)
+
+// append : 'a list -> 'a list -> 'a list
+append x y =
+    x == [] ? y : (hd x) :: append (tl x) y
+
+// reverse : 'a list -> 'a list
+reverse x =
+    x == [] ? [] : append (reverse (tl x)) [hd x]
+
+// filter : ('a -> bool) -> 'a list -> 'a list
+filter p x =
+    x == [] ? []
+            : p (hd x) ? (hd x) :: filter p (tl x)
+                       : filter p (tl x)
+
+// _ = modules ()
+
+/*
+length x =
+    if x == [] then 0
+    else 1 + length (tl x)
+
+map f x =
+    if x == [] then []
+    else f (hd x) :: map f (tl x)
+
+append x y =
+    if x == [] then y
+    else (hd x) :: append (tl x) y
+
+reverse x =
+    if x == [] then []
+    else append (reverse (tl x)) [hd x]
+
+filter p x =
+    if x == [] then []
+    else if p (hd x) then
+        (hd x) :: filter p (tl x)
+    else filter p (tl x)
+*/

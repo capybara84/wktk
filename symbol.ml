@@ -87,6 +87,12 @@ let set_module mid =
         default_module.env <- (mid, sym) :: default_module.env
     end
 
+let rename_module old_name new_name =
+    let modu = lookup_module old_name in
+    let module_list = List.remove_assoc old_name !all_modules in
+    all_modules := (new_name, modu) :: module_list
+
+
 let insert_default mid id tys v ism =
     if mid <> "" then
         set_module mid;

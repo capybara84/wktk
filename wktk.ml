@@ -63,7 +63,7 @@ let () =
     if !do_test then
         Test.test ()
     else if !filenames <> [] then
-        List.iter (fun name -> ignore @@ load_source name) !filenames
+        List.iter (fun name -> ignore @@ Type.load_source name) !filenames
     else
         repl ()
 

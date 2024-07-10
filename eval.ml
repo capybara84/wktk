@@ -285,7 +285,6 @@ let rec eval e =
             VUnit
         | (EImport (mid, aid), pos) ->
             debug_print @@ "eval import " ^ mid;
-            (*TODO*)
             VUnit
     in
     debug_out @@ "eval_expr > " ^ s_value res;

@@ -30,6 +30,11 @@ let fn_tail pos arg =
 
 let fn_print pos arg =
     let arg_v = Eval.eval arg in
+    print_string (s_value arg_v);
+    VUnit
+
+let fn_println pos arg =
+    let arg_v = Eval.eval arg in
     print_endline (s_value arg_v);
     VUnit
 
@@ -64,6 +69,7 @@ and func_list = [
     ("", "hd", TFun (TList hd_t, hd_t), fn_head);
     ("", "tl", TFun (TList tl_t, TList tl_t), fn_tail);
     ("", "pr", TFun (new_tvar(), TUnit), fn_print);
+    ("", "prn", TFun (new_tvar(), TUnit), fn_println);
     ("", "to_s", TFun (new_tvar(), TString), fn_to_s);
 
     ("", "add", TFun (add_t, TFun (add_t, add_t)), fn_add);

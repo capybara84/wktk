@@ -12,5 +12,7 @@ _ =
     modules()
     pr "A.x = "
     pr A.x
+    nl ()
     pr "B.x = "
     pr B.x
+    nl ()

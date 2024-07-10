@@ -4,6 +4,20 @@ let verbose msg =
     if !verbose_flag then
         print_endline msg
 
+
+
+let default_extension = ".wt"
+let default_directory = "./"
+
+let filename_to_module_name filename =
+    try
+        String.capitalize_ascii @@ Filename.chop_suffix (Filename.basename filename) default_extension
+    with Invalid_argument _ -> String.capitalize_ascii filename
+
+let module_name_to_filename name =
+    default_directory ^ String.uncapitalize_ascii name ^ default_extension
+
+
 type pos = {
     filename : string;
     line : int;

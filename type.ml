@@ -19,6 +19,8 @@ let debug_out s =
     if !debug_scope_flag then
         (decr debug_indent; debug_print @@ "OUT " ^ s)
 
+
+
 let rec s_typ_raw ty =
     let rec to_s n ty =
         let (m, str) =
@@ -373,16 +375,11 @@ let rec infer e =
             infer_list el
         | (EModule mid, _) ->
             debug_print @@ "infer module " ^ mid;
-            (*
-            let modu = Symbol.set_module mid in
-            *)
+            Symbol.set_module mid;
             TUnit
         | (EImport (mid, aid), _) ->
             debug_print @@ "infer import " ^ mid;
-            (*
-            let modu = load_module mid aid in
-            Symbol.set_module modu;
-            *)
+            load_module mid aid;
             TUnit
     in
     debug_out @@ "infer > " ^ s_typ_raw res;
@@ -392,7 +389,7 @@ and infer_let = function
     | [] -> ()
     | x::xs ->
         let t = infer x in
-        ignore t;(*TODO*)
+        ignore t;(*TODO 型は無視じゃなくて Unit かどうかを確認しないと*)
         infer_let xs
 
 and infer_list = function
@@ -405,7 +402,29 @@ and infer_list = function
         infer_list xs
 
 and load_module mid aid =
-    debug_print @@ "load_module '" ^ mid ^ "'" ^ (match aid with Some id -> " as '" ^ id ^ "'" | None -> "");
-    (*TODO*)
-    ()
+    debug_print @@ "load_module '" ^ mid ^ "'"
+        ^ (match aid with Some id -> " as '" ^ id ^ "'" | None -> "");
+    if not (Symbol.exist_module mid aid) then begin
+        let filename = module_name_to_filename mid in
+        if load_source filename then begin
+            match aid with
+            | Some id -> Symbol.rename_module mid id
+            | None -> ()
+        end
+    end
+
+and load_source filename =
+    verbose @@ "load '" ^ filename ^ "'...";
+    try
+        let modu_name = filename_to_module_name filename in
+        Symbol.set_module modu_name;
+        let e = Parser.parse_file filename in
+        let t = infer e in
+        let v = Eval.eval e in
+        verbose @@ s_value v ^ " : " ^ s_typ t;
+        true
+    with
+        | Error (pos, msg) -> print_endline @@ s_pos pos ^ "Error: " ^ msg; false
+        | End_of_file -> (); print_endline "End_of_file"; false
+        | Sys_error s -> print_endline s; false
 

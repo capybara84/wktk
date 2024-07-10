@@ -1,6 +1,3 @@
-module
-    moduleの実装
-    importの実装
 type
     named
     decl
@@ -18,6 +15,9 @@ builtin function
 message
 
 -----
+module
+    *moduleの実装
+    *importの実装
 *eval
 *type 型推論
 *parser

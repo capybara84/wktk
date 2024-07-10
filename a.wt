@@ -1,0 +1,18 @@
+module A
+
+x = 1
+
+module B
+
+x = 2
+
+module Main
+
+_ =
+    modules()
+    pr "A.x = "
+    pr A.x
+    nl ()
+    pr "B.x = "
+    pr B.x
+    nl ()

@@ -39,6 +39,8 @@ let load_source filename =
 
 let () =
     print_endline "wktk version 0.1";
+    Symbol.init ();
+    Builtins.init ();
 
     let filenames = ref [] in
     let do_test = ref false in
@@ -61,7 +63,7 @@ let () =
     if !do_test then
         Test.test ()
     else if !filenames <> [] then
-        List.iter (fun name -> ignore @@ load_source name) !filenames
+        List.iter (fun name -> ignore @@ Type.load_source name) !filenames
     else
         repl ()
 

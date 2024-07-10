@@ -26,10 +26,6 @@ let current_module = ref default_module
 
 let get_current_tenv () = !current_module.tenv
 
-let set_module mid =
-    (*TODO*)
-    ()
-
 let lookup_tysym_from_module modu id =
     List.assoc id modu.tenv
 
@@ -71,4 +67,70 @@ let enter_new_env env =
 
 let leave_env env =
     !current_module.env <- env
+
+
+
+
+let set_module mid =
+    verbose @@ "set_module: " ^ mid;
+    try
+        current_module := lookup_module mid
+    with Not_found -> begin
+        current_module := insert_module mid;
+
+        let tys = make_typ_scheme [] (TModule mid) in
+        let tysym = { tys = tys; is_mutable = false } in
+        default_module.tenv <- (mid, tysym) :: default_module.tenv;
+
+        let v = VModule !current_module in
+        let sym = { v = v; is_mutable = false } in
+        default_module.env <- (mid, sym) :: default_module.env
+    end
+
+let rename_module old_name new_name =
+    let modu = lookup_module old_name in
+    let module_list = List.remove_assoc old_name !all_modules in
+    all_modules := (new_name, modu) :: module_list
+
+
+let insert_default mid id tys v ism =
+    if mid <> "" then
+        set_module mid;
+    let tysym = { tys = tys; is_mutable = ism } in
+    insert_tysym id tysym;
+    let sym = { v = v; is_mutable = ism } in
+    insert_sym id sym
+
+let init () =
+    let tys = make_typ_scheme [] (TModule default_module_name) in
+    let tysym = { tys = tys; is_mutable = false } in
+    default_module.tenv <- (default_module_name, tysym) :: default_module.tenv;
+
+    let v = VModule default_module in
+    let sym = { v = v; is_mutable = false } in
+    default_module.env <- (default_module_name, sym) :: default_module.env
+
+
+let show_typ_tables (tenv : tenv) = 
+    print_endline "  SHOW TYP TABLES";
+    List.iter (fun (id, (tysym : typ_sym)) ->
+        print_endline @@ "    " ^ (if tysym.is_mutable then "mut " else "" )
+            ^ id ^ " : " ^ s_typ (tysym.tys.body) ) tenv
+
+let show_tables env =
+    print_endline "  SHOW SYM TABLES";
+    List.iter (fun (id, sym) ->
+        print_endline @@ "    " ^ (if sym.is_mutable then "mut " else "" )
+            ^ id ^ " = " ^ s_value sym.v) env
+
+let show_all_symbols modu =
+    print_endline @@ "SHOW MODULE : " ^ modu.name;
+    show_typ_tables modu.tenv;
+    show_tables modu.env;
+    print_endline @@ "current = " ^ !current_module.name
+
+let show_all_modules () =
+    print_endline "SHOW ALL MODULES";
+    List.iter (fun (_, m) -> show_all_symbols m) !all_modules
+
 

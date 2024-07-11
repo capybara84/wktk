@@ -1,4 +1,7 @@
-tuple
+*tuple
+    *tuple基本実装
+    テスト
+moduleのテストを実装したい
 
 type
     named
@@ -7,17 +10,20 @@ record
 mutable の扱いを今はis_mutableにしているが、record { mutable contents } にしたい
 assignの型チェック
 
-list
-string
-tuple
 array
+    基本実装
+    テスト
+    ライブラリ
+
+list library
+string library
 record
 pattern match
-builtin function
 message
 
 -----
-module
+*builtin function
+*module
     *moduleの実装
     *importの実装
 *eval

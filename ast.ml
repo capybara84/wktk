@@ -202,7 +202,7 @@ let rec s_typ ty =
             | TBool -> (5, "bool") | TChar -> (5, "char") | TString -> (5, "string")
             | TModule s -> (5, s)
             | TList t -> (3, to_s 0 t ^ " list")
-            | TTuple tl -> (3, s_list (to_s 4) " * " tl)
+            | TTuple tl -> (3, "(" ^ s_list (to_s 4) " * " tl ^ ")")
             | TFun (t1, t2) ->
                 let s1 = to_s 1 t1 in
                 let s2 = to_s 0 t2 in

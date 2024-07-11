@@ -1,6 +1,3 @@
-*tuple
-    *tuple基本実装
-    テスト
 moduleのテストを実装したい
 
 type
@@ -22,6 +19,9 @@ pattern match
 message
 
 -----
+*tuple
+    *tuple基本実装
+    *テスト
 *builtin function
 *module
     *moduleの実装

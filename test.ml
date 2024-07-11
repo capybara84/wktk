@@ -145,6 +145,7 @@ let parser_test_data = [
     ("[1,2,3]");
     ("[]");
     ("()");
+    ("[ ]");
 ]
 
 let parser_test () =
@@ -185,6 +186,9 @@ let type_test_data = [
     ("['a','b']", "char list");
     ("\"abc\"", "string");
     ("let id x = x in id 1", "int");
+    ("(1,2)", "(int * int)");
+    ("('a',2)", "(char * int)");
+    ("[(1,2,'a')]", "(int * int * char) list");
     ("(fn x -> x)", "'a -> 'a");
     ("fn x -> fn y -> x", "'a -> 'b -> 'a");
     ("fn x -> fn y -> y", "'a -> 'b -> 'b");
@@ -317,6 +321,12 @@ let eval_test_data = [
     ("let id x = x in id 1", VInt 1);
     ("let mut x = 1 in\n  x <- 2\n  x", VInt 2);
     ("let x = 1; y = 2 in x + y", VInt 3);
+    ("module A", VUnit);
+    ("List.length [1,2]", VInt 2);
+    ("[1,2] + [3]", VCons(VInt 1, VCons(VInt 2, VCons(VInt 3, VNil))));
+    ("\"ab\" + ['c']", VCons (VChar 'a', VCons (VChar 'b', VCons (VChar 'c', VNil))));
+    ("(1,2)", VTuple [VInt 1;VInt 2]);
+    ("('a',2)", VTuple [VChar 'a';VInt 2]);
 ]
 
 

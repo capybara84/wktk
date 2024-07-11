@@ -22,23 +22,6 @@ let rec repl () =
         | Sys_error s -> print_endline s
 
 
-
-(*
-let load_source filename =
-    verbose @@ "load_source '" ^ filename ^ "'";
-    try
-        let e = Parser.parse_file filename in
-        let t = Type.infer e in
-        let v = Eval.eval e in
-        print_endline @@ s_value v ^ " : " ^ s_typ t;
-        true
-    with
-        | Error (pos, msg) ->
-            print_endline @@ s_pos pos ^ "Error: " ^ msg; false
-        | End_of_file -> (); true
-        | Sys_error s -> print_endline s; false
-*)
-
 let () =
     print_endline "wktk version 0.1";
     Symbol.init ();

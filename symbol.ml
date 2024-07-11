@@ -1,8 +1,6 @@
 
 open Ast
 
-let default_module_name = "Main"
-
 let all_modules = ref []
 
 let insert_module name =
@@ -61,8 +59,7 @@ let insert_sym id sym =
 
 let enter_new_env env =
     let res = !current_module.env in
-    if env <> [] then
-        !current_module.env <- env;
+    !current_module.env <- List.append env res;
     res
 
 let leave_env env =
@@ -70,6 +67,8 @@ let leave_env env =
 
 
 
+let set_default_module () =
+    current_module := default_module
 
 let set_module mid =
     verbose @@ "set_module: " ^ mid;
@@ -94,8 +93,7 @@ let rename_module old_name new_name =
 
 
 let insert_default mid id tys v ism =
-    if mid <> "" then
-        set_module mid;
+    set_module (if mid = "" then default_module_name else mid);
     let tysym = { tys = tys; is_mutable = ism } in
     insert_tysym id tysym;
     let sym = { v = v; is_mutable = ism } in

@@ -1,0 +1,14 @@
+x = 2
+
+test () =
+    let
+        y = x + 4
+        z = y + 3
+    in
+        let a = 5
+            b = z
+        in
+        a + b
+
+_ =
+    prn (test())

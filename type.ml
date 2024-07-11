@@ -285,7 +285,7 @@ let rec infer e =
         | (ELet (el, body), pos) ->
             debug_print @@ "infer let ... in " ^ s_expr body;
             let ctx = Symbol.enter_new_tenv () in
-            infer_let el;
+            ignore @@ infer_list el;
             let t = infer body in
             Symbol.leave_tenv ctx;
             t
@@ -371,7 +371,14 @@ let rec infer e =
                     (*TODO object message *)
                     TUnit
             end
+        | (EBlock el, _) ->
+            debug_print @@ "infer block " ^ s_list s_expr "; " el;
+            let ctx = Symbol.enter_new_tenv () in
+            let res = infer_list el in
+            Symbol.leave_tenv ctx;
+            res
         | (ESeq el, _) ->
+            debug_print @@ "infer seq " ^ s_list s_expr "; " el;
             infer_list el
         | (EModule mid, _) ->
             debug_print @@ "infer module " ^ mid;
@@ -384,13 +391,6 @@ let rec infer e =
     in
     debug_out @@ "infer > " ^ s_typ_raw res;
     res
-
-and infer_let = function
-    | [] -> ()
-    | x::xs ->
-        let t = infer x in
-        ignore t;(*TODO 型は無視じゃなくて Unit かどうかを確認しないと*)
-        infer_let xs
 
 and infer_list = function
     | [] -> TUnit
@@ -422,6 +422,7 @@ and load_source filename =
         let t = infer e in
         let v = Eval.eval e in
         verbose @@ s_value v ^ " : " ^ s_typ t;
+        Symbol.set_default_module();
         true
     with
         | Error (pos, msg) -> print_endline @@ s_pos pos ^ "Error: " ^ msg; false

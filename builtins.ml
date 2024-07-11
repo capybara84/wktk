@@ -72,8 +72,8 @@ let fn_modules _ _ =
 
 let rec fn_builtins _ _ =
     List.iter (fun (mod_id, id, ty, _) ->
-                    print_endline @@ (if mod_id = "" then "" else mod_id ^ "." )
-                            ^ id ^ " : " ^ s_typ ty) func_list;
+                if mod_id = "" then
+                    print_endline @@ id ^ " : " ^ s_typ ty) func_list;
     VUnit
 
 and hd_t = new_tvar ()

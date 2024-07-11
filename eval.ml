@@ -71,7 +71,14 @@ let rec eval_shallow_equal pos = function
     | (VCons _, VNil) | (VNil, VCons _) -> false
     | (VString "", VNil) | (VNil, VString "") -> false
     | (VString _, VNil) | (VNil, VString _) -> false
+    | (VTuple xl, VTuple yl) -> shallow_equal_tuple pos (xl, yl)
     | (lhs, rhs) -> error pos @@ "type error (shallow equal) " ^ s_value lhs ^ " & " ^ s_value rhs
+and shallow_equal_tuple pos = function
+    | ([], []) -> true
+    | (_, []) | ([], _) -> false
+    | (x::xs, y::ys) ->
+        if not (eval_shallow_equal pos (x, y)) then false
+        else shallow_equal_tuple pos (xs, ys)
 
 let rec eval_deep_equal pos = function
     | (VUnit, VUnit) -> true
@@ -86,7 +93,14 @@ let rec eval_deep_equal pos = function
     | (VCons _, VNil) | (VNil, VCons _) -> false
     | (VString "", VNil) | (VNil, VString "") -> true
     | (VString _, VNil) | (VNil, VString _) -> false
+    | (VTuple xl, VTuple yl) -> deep_equal_tuple pos (xl, yl)
     | (lhs, rhs) -> error pos @@ "type error (deep equal) " ^ s_value lhs ^ " & " ^ s_value rhs
+and deep_equal_tuple pos = function
+    | ([], []) -> true
+    | (_, []) | ([], _) -> false
+    | (x::xs, y::ys) ->
+        if not (eval_deep_equal pos (x, y)) then false
+        else deep_equal_tuple pos (xs, ys)
 
 let eval_binary pos = function
     | (BinEq, vl, vr) -> VBool (eval_deep_equal pos (vl, vr))
@@ -167,6 +181,9 @@ let rec eval e =
                         Symbol.lookup_default s
                     with Not_found -> error pos @@ "'" ^ s ^ "' not found")
             in sym.v
+        | (ETuple el, _) ->
+            debug_print @@ "eval tuple " ^ s_expr e;
+            VTuple (List.map (fun x -> eval x) el)
         | (EUnary (op, e), pos) ->
             debug_print @@ "eval unary " ^ s_unop op ^ " " ^ s_expr e;
             let v = eval e in

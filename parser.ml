@@ -172,8 +172,26 @@ and parse_simple_expr p =
             next_token p;
             skip_newline p;
             let e = parse_expr p in
-            expect p RPAR;
-            e
+            if token p = COMMA then begin
+                let rec loop lst =
+                    let e = parse_expr p in
+                    if token p = COMMA then begin
+                        next_token p;
+                        skip_newline p;
+                        loop (e :: lst)
+                    end else
+                        List.rev (e :: lst)
+                in
+                let pos = get_pos p in
+                next_token p;
+                skip_newline p;
+                let e2 = loop [] in
+                expect p RPAR;
+                (ETuple (e::e2), pos)
+            end else begin
+                expect p RPAR;
+                e
+            end
         | tk -> error (get_pos p) @@ "syntax error at " ^ s_token tk ^ " (simple_expr)"
     in
     debug_out @@ "parse_simple_expr:" ^ s_expr res;

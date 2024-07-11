@@ -28,6 +28,21 @@ let fn_tail pos arg =
         else error pos "tail: null string"
     | _ -> error pos "type error ('list' required)"
 
+let fn_fst pos arg =
+    let arg_v = Eval.eval arg in
+    match arg_v with
+    | VTuple (x::_) -> x
+    | VTuple _ -> error pos "tuple error"
+    | _ -> error pos "type error ('tuple' required)"
+
+let fn_snd pos arg =
+    let arg_v = Eval.eval arg in
+    match arg_v with
+    | VTuple (_::x::_) -> x
+    | VTuple _ -> error pos "tuple error"
+    | _ -> error pos "type error ('tuple' required)"
+
+
 let fn_print pos arg =
     let arg_v = Eval.eval arg in
     print_string (s_value arg_v);
@@ -57,17 +72,24 @@ let fn_modules _ _ =
 
 let rec fn_builtins _ _ =
     List.iter (fun (mod_id, id, ty, _) ->
-                    print_endline @@ mod_id ^ "." ^ id ^ " : " ^ s_typ ty) func_list;
+                    print_endline @@ (if mod_id = "" then "" else mod_id ^ "." )
+                            ^ id ^ " : " ^ s_typ ty) func_list;
     VUnit
 
 and hd_t = new_tvar ()
 and tl_t = new_tvar ()
+and fst_t = new_tvar ()
+and fst_any_t = new_tvar ()
+and snd_t = new_tvar ()
+and snd_any_t = new_tvar ()
 and add_t = new_tvar ()
 and func_list = [
     ("", "ignore", TFun (new_tvar(), TUnit), fn_ignore);
     ("", "nl", TFun (TUnit, TUnit), fn_newline);
     ("List", "hd", TFun (TList hd_t, hd_t), fn_head);
     ("List", "tl", TFun (TList tl_t, TList tl_t), fn_tail);
+    ("Tuple", "fst", TFun (TTuple (fst_t::[fst_any_t]), fst_t), fn_fst);
+    ("Tuple", "snd", TFun (TTuple (snd_any_t::[snd_t]), snd_t), fn_snd);
     ("", "pr", TFun (new_tvar(), TUnit), fn_print);
     ("", "prn", TFun (new_tvar(), TUnit), fn_println);
     ("", "to_s", TFun (new_tvar(), TString), fn_to_s);

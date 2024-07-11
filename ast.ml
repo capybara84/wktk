@@ -47,6 +47,7 @@ type typ =
     | TUnit | TInt | TFloat | TBool | TChar | TString
     | TModule of string
     | TList of typ
+    | TTuple of typ list
     | TFun of typ * typ
     | TVar of int * typ option ref
 and
@@ -81,6 +82,7 @@ type expr_decl =
     | EBool of bool | EInt of int | EFloat of float | EChar of char
     | EString of string | EId of string
     | EModule of string | EImport of string * string option
+    | ETuple of expr list
     | EUnary of unop * expr
     | EBinary of binop * expr * expr
     | EApply of expr * expr
@@ -100,6 +102,7 @@ type value =
     | VBool of bool | VChar of char | VString of string
     | VModule of module_def
     | VCons of value * value
+    | VTuple of value list
     | VClosure of expr * expr * env
     | VBuiltin of (pos -> expr -> value)
 and
@@ -166,6 +169,7 @@ let rec s_expr = function
     | (EModule s, _) -> "module " ^ s ^ "\n"
     | (EImport (s, None), _) -> "import " ^ s ^ "\n"
     | (EImport (s, Some a), _) -> "import " ^ s ^ " as " ^ a ^ "\n"
+    | (ETuple el, _) -> "(" ^ s_list s_expr ", " el ^ ")"
     | (EUnary (op, e), _) -> "(" ^ s_unop op ^ s_expr e ^ ")"
     | (EBinary (op, lhs, rhs), _) ->
         "(" ^ s_expr lhs ^ " " ^ s_binop op ^ " " ^ s_expr rhs ^ ")"
@@ -198,6 +202,7 @@ let rec s_typ ty =
             | TBool -> (5, "bool") | TChar -> (5, "char") | TString -> (5, "string")
             | TModule s -> (5, s)
             | TList t -> (3, to_s 0 t ^ " list")
+            | TTuple tl -> (3, s_list (to_s 4) " * " tl)
             | TFun (t1, t2) ->
                 let s1 = to_s 1 t1 in
                 let s2 = to_s 0 t2 in
@@ -229,6 +234,7 @@ let rec s_value = function
     | VString s -> s
     | VModule _ -> "<module>"
     | (VCons (_,_)) as v -> "[" ^ (cons_to_string v) ^ "]"
+    | VTuple vl -> "(" ^ s_list s_value ", " vl ^ ")"
     | VClosure _ -> "<closure>"
     | VBuiltin _ -> "<builtin>"
 and cons_to_string = function

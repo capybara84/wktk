@@ -174,7 +174,7 @@ and parse_simple_expr p =
             let e = parse_expr p in
             expect p RPAR;
             e
-        | _ -> error pos "syntax error"
+        | tk -> error (get_pos p) @@ "syntax error at " ^ s_token tk ^ " (simple_expr)"
     in
     debug_out @@ "parse_simple_expr:" ^ s_expr res;
     res
@@ -440,7 +440,7 @@ and parse_comp_expr p =
     next_token p;
     skip_newline p;
     let el = loop [] in
-    let res = make_expr (ESeq el) pos in
+    let res = make_expr (EBlock el) pos in
     debug_out @@ "parse_comp_expr:" ^ s_expr res;
     res
 
@@ -517,7 +517,7 @@ and parse_let_expr p =
                 skip_newline p;
                 skip_dedent p;
                 loop (e :: acc)
-            | _ -> error (get_pos p) "syntax error"
+            | tk -> error (get_pos p) @@ "syntax error at " ^ s_token tk ^ " (let)"
         end
     in
     let el = loop [] in
@@ -656,7 +656,7 @@ and parse_id_def is_mutable p =
                                     (fun a b -> make_expr (ELambda (a, b)) pos)
                                     params body)) pos
             end
-        | _ -> error (get_pos p) "syntax error"
+        | tk -> error (get_pos p) @@ "syntax error at " ^ s_token tk ^ " (id_def)"
     in
     debug_out @@ "parse_id_def:" ^ s_expr res;
     res
@@ -674,7 +674,7 @@ and parse_decl p =
         | TYPE -> parse_type_def p
         | EOF -> make_expr EEof (get_pos p)
         | Id _ -> parse_id_def false p
-        | _ -> error (get_pos p) "syntax error"
+        | tk -> error (get_pos p) @@ "syntax error at " ^ s_token tk ^ " (decl)"
     in
     debug_out @@ "parse_decl:" ^ s_expr res;
     res
@@ -750,8 +750,22 @@ let parse_toplevel p =
     debug_out @@ "parse_toplevel:" ^ s_expr res;
     res
 
+let debug_show_toks toks =
+    if !debug_scope_flag then begin
+        print_string "[";
+        let rec loop = function
+            | [] -> ()
+            | x::xs ->
+                print_string @@ s_token (fst x) ^ " ";
+                loop xs
+        in loop toks;
+        print_endline "]"
+    end
+    
+
 let parse_text toplevel txt =
     let pars = { toks = Scanner.open_text txt } in
+    debug_show_toks pars.toks;
     if toplevel then
         parse_toplevel pars
     else
@@ -759,5 +773,6 @@ let parse_text toplevel txt =
 
 let parse_file filename =
     let pars = { toks = Scanner.open_file filename } in
+    debug_show_toks pars.toks;
     parse_program pars
 

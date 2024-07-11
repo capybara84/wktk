@@ -199,7 +199,7 @@ let rec scan_indent scan acc =
             | _ ->
                 debug_print "scan_indent ANY";
                 if !indent_stack = [] then
-                    failwith "indent_stack BUG"
+                    error scan.pos "indent_stack BUG"
                 else begin
                     let last_indent = List.hd !indent_stack in
                     debug_print @@ "last_indent=" ^
@@ -280,7 +280,7 @@ and get_tokens scan acc =
             let rec dedent acc =
                 debug_print "dedent";
                 if !indent_stack = [] then
-                    failwith "indent_stack empty"
+                    error pos "indent_stack empty"
                 else begin
                     let last_indent = List.hd !indent_stack in
                     if last_indent = 0 then

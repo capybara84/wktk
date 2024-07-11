@@ -55,7 +55,9 @@ let rec eval_add pos = function
     | (VCons _ as l, VNil) -> l
     | (VNil, (VCons _ as r)) -> r
     | (VCons _ as l, (VCons _ as r)) -> cons_append l r
-    | _ -> error pos "type error (binary add)"
+    | (l,r) ->
+        print_endline @@ "l=" ^ s_value l ^ ", r=" ^ s_value r;
+        error pos "type error (binary add)"
 
 let rec eval_shallow_equal pos = function
     | (VUnit, VUnit) -> true
@@ -208,14 +210,12 @@ let rec eval e =
             in
             v
         | (ELet (el, body), pos) ->
-        begin
             debug_print @@ "eval let ... in " ^ s_expr body;
             let ctx = Symbol.enter_new_env [] in
             eval_let el;
             let res = eval body in
             Symbol.leave_env ctx;
             res
-        end
         | (EValDef (ism, id, e), pos) ->
             debug_print @@ "eval defval " ^ id ^ " = " ^ s_expr e;
             let v = eval e in
@@ -273,12 +273,15 @@ let rec eval e =
                     (*TODO object message *)
                     VUnit
             end
-        | (ESeq el, pos) ->
-            debug_print @@ "eval seq " ^ s_list s_expr "; " el;
+        | (EBlock el, pos) ->
+            debug_print @@ "eval block " ^ s_list s_expr "; " el;
             let ctx = Symbol.enter_new_env [] in
             let res = eval_list el in
             Symbol.leave_env ctx;
             res
+        | (ESeq el, pos) ->
+            debug_print @@ "eval seq " ^ s_list s_expr "; " el;
+            eval_list el;
         | (EModule mid, _) ->
             debug_print @@ "eval module " ^ mid;
             Symbol.set_module mid;
@@ -287,7 +290,7 @@ let rec eval e =
             debug_print @@ "eval import " ^ mid;
             VUnit
     in
-    debug_out @@ "eval_expr > " ^ s_value res;
+    debug_out @@ "eval > " ^ s_value res;
     res
 
 and eval_let = function

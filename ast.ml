@@ -4,8 +4,7 @@ let verbose msg =
     if !verbose_flag then
         print_endline msg
 
-
-
+let default_module_name = "Main"
 let default_extension = ".wt"
 let default_directory = "./"
 
@@ -92,6 +91,7 @@ type expr_decl =
     | ECond of expr * expr * expr
     | EAssign of expr * expr
     | EMessage of expr * string
+    | EBlock of expr list
     | ESeq of expr list
 and expr = expr_decl * pos
 
@@ -179,7 +179,8 @@ let rec s_expr = function
         "(if " ^ s_expr c ^ " then " ^ s_expr t ^ " else " ^ s_expr e ^ ")"
     | (EAssign (lhs, rhs), _) -> s_expr lhs ^ " <- " ^ s_expr rhs
     | (EMessage (lhs, s), _) -> s_expr lhs ^ "." ^ s
-    | (ESeq el, _) -> "begin " ^ s_list s_expr "; " el ^ " end"
+    | (EBlock el, _) -> "{ " ^ s_list s_expr "; " el ^ " }"
+    | (ESeq el, _) -> s_list s_expr "\n" el
 
 let int_to_alpha x =
     if x <= Char.code 'z' - Char.code 'a' then

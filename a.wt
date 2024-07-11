@@ -6,6 +6,12 @@ module B
 
 x = 2
 
+module L
+
+length x =
+    if x = [] then 0
+    else 1 + length (List.tl x)
+
 module Main
 
 _ =
@@ -15,4 +21,7 @@ _ =
     nl ()
     pr "B.x = "
     pr B.x
+    nl ()
+    pr "L.length [1,2,3,4] = "
+    pr (L.length [1,2,3,4])
     nl ()

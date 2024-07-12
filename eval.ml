@@ -306,6 +306,10 @@ let rec eval e =
         | (EImport (mid, aid), pos) ->
             debug_print @@ "eval import " ^ mid;
             VUnit
+        | (ETypeDef (tvs, id, tysym), _) ->
+            debug_print @@ "type def " ^ id ^ " = " ^ s_typ (tysym.tys.body);
+            (*TODO*)
+            VUnit
     in
     debug_out @@ "eval > " ^ s_value res;
     res

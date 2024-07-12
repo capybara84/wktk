@@ -1,0 +1,80 @@
+type-definition	::=	TYPE typedef { AND typedef }
+ 
+typedef	::=	[type-params] IDENT type-information
+ 
+type-information	::=	[type-equation] [type-representation]
+ 
+type-equation	::=	'=' typexpr
+ 
+type-representation	::=	'=' ['|'] constr-decl { '|' constr-decl }
+ 	∣	 '=' record-decl
+ 
+type-params	::=	type-param
+ 	∣	 '(' type-param { ',' type-param } ')'
+ 
+type-param	::=	''' IDENT
+ 
+record-decl	::=	'{' field-decl { ';' field-decl } [';'] '}'
+ 
+constr-decl	::=	IDENT [ OF constr-args ]
+ 
+constr-args	::=	typexpr { '*' typexpr }
+ 
+field-decl	::=	[MUT] IDENT ':' typexpr
+ 
+----
+
+typexpr	::=	''' IDENT
+ 	∣	 '_'
+ 	∣	 '(' typexpr ')'
+ 	∣	 typexpr '->' typexpr
+ 	∣	 typexpr { '*' typexpr }+
+ 	∣	 IDENT
+ 	∣	 typexpr IDENT
+ 	∣	 '(' typexpr { ',' typexpr } ')' IDENT
+
+
+--------------
+
+type-definition	::=	TYPE typedef { AND typedef }
+ 
+typedef	::=	[type-params] TYPECONSTR-NAME type-information
+ 
+type-information	::=	[type-equation] [type-representation]
+ 
+type-equation	::=	'=' typexpr
+ 
+type-representation	::=	'=' ['|'] constr-decl { '|' constr-decl }
+ 	∣	 '=' record-decl
+ 	∣	 '=' '|'
+ 
+type-params	::=	type-param
+ 	∣	 '(' type-param { ',' type-param } ')'
+ 
+type-param	::=	''' IDENT
+ 
+record-decl	::=	'{' field-decl { ';' field-decl } [';'] '}'
+ 
+constr-decl	::=	CONSTR-NAME [ OF constr-args ]
+ 
+constr-args	::=	typexpr { '*' typexpr }
+ 
+field-decl	::=	[MUT] FIELD-NAME ':' typexpr
+ 
+----
+
+typexpr	::=	''' IDENT
+ 	∣	 '_'
+ 	∣	 '(' typexpr ')'
+ 	∣	 typexpr '->' typexpr
+ 	∣	 typexpr { '*' typexpr }+
+ 	∣	 TYPECONSTR
+ 	∣	 typexpr TYPECONSTR
+ 	∣	 '(' typexpr { ',' typexpr } ')' TYPECONSTR
+
+
+TYPECONSTR ::= lowercase-ident
+TYPECONSTR-NAME ::= lowercase-ident
+CONSTR-NAME ::= capitalized-ident
+FIELD-NAME ::= lowercase-ident
+

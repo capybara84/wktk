@@ -22,16 +22,16 @@ type_def
     = TYPE type_decl 
 
 type_decl
-    = [type_params] ID ['=' type_representation]
+    = [type_params] ID '=' type_representation
 type_params
     = TVAR
     | '(' TVAR {',' TVAR} ')'
 type_representation
-    = constr_decl {'|' constr_decl }
-    | '{' field_decl ';' {field_decl ';' } '}'
+    = '|' constr_decl {'|' constr_decl }
+    | '{' field_decl sep {field_decl sep } '}'
     | typexpr
 constr_decl
-    = ID [typexpr {'*' typexpr}]
+    = ID [typexpr]
 field_decl
     = [MUT] ID ':' typexpr
 typexpr
@@ -44,6 +44,7 @@ typexpr_primary
     = INT | FLOAT | CHAR | UNIT | BOOL | STRING | TVAR | typeconstr
 typeconstr
     = {ID '.'} ID
+sep = ';' | NEWLINE
 
 expr
     = ';'

@@ -1,11 +1,14 @@
-moduleのテストを実装したい
+
 
 type
-    named
+    named 途中
     decl
+
 record
 mutable の扱いを今はis_mutableにしているが、record { mutable contents } にしたい
 assignの型チェック
+
+改行チェック
 
 array
     基本実装
@@ -18,6 +21,7 @@ record
 pattern match
 message
 
+moduleのテスト
 -----
 *tuple
     *tuple基本実装

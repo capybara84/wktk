@@ -95,9 +95,10 @@ type expr_decl =
     | EMessage of expr * string
     | EBlock of expr list
     | ESeq of expr list
+    | ETypeDef of int list * string * typ_sym
 and expr = expr_decl * pos
 
-type value =
+and value =
     | VUnit | VNil | VInt of int | VFloat of float
     | VBool of bool | VChar of char | VString of string
     | VModule of module_def
@@ -145,6 +146,41 @@ let s_token = function
     | STAR -> "*" | SLASH -> "/" | PERCENT -> "%"
     | QUES -> "?" | UNIT -> "()" | NIL -> "[]"
 
+let int_to_alpha x =
+    if x <= Char.code 'z' - Char.code 'a' then
+        String.make 1 (Char.chr ((Char.code 'a') + x))
+    else
+        string_of_int x
+
+let rec s_typ ty =
+    let counter = ref 0 in
+    let dic = ref [] in
+    let rec to_s n ty =
+        let (m, str) =
+            match ty with
+            | TUnit -> (5, "unit") | TInt -> (5, "int") | TFloat -> (5, "float")
+            | TBool -> (5, "bool") | TChar -> (5, "char") | TString -> (5, "string")
+            | TModule s -> (5, s)
+            | TList t -> (3, to_s 0 t ^ " list")
+            | TTuple tl -> (3, "(" ^ s_list (to_s 4) " * " tl ^ ")")
+            | TFun (t1, t2) ->
+                let s1 = to_s 1 t1 in
+                let s2 = to_s 0 t2 in
+                (1, s1 ^ " -> " ^ s2)
+            | TVar (x, {contents=None}) ->
+                let y = try List.assoc x !dic
+                    with Not_found ->
+                        dic := (x, !counter) :: !dic;
+                        let n = !counter in
+                        incr counter;
+                        n
+                in (5, "'" ^ int_to_alpha y)
+            | TVar (_, {contents=Some t}) ->
+                (3, to_s n t)
+        in
+        if m > n then str
+        else "(" ^ str ^ ")"
+    in to_s (-1) ty
 
 let s_binop = function
     | BinAdd -> "+" | BinSub -> "-" | BinMul -> "*"
@@ -185,42 +221,8 @@ let rec s_expr = function
     | (EMessage (lhs, s), _) -> s_expr lhs ^ "." ^ s
     | (EBlock el, _) -> "{ " ^ s_list s_expr "; " el ^ " }"
     | (ESeq el, _) -> s_list s_expr "\n" el
+    | (ETypeDef (fs, id, ty), _) -> "type " ^ id ^ " = " ^ s_typ ty.tys.body ^ ";\n"
 
-let int_to_alpha x =
-    if x <= Char.code 'z' - Char.code 'a' then
-        String.make 1 (Char.chr ((Char.code 'a') + x))
-    else
-        string_of_int x
-
-let rec s_typ ty =
-    let counter = ref 0 in
-    let dic = ref [] in
-    let rec to_s n ty =
-        let (m, str) =
-            match ty with
-            | TUnit -> (5, "unit") | TInt -> (5, "int") | TFloat -> (5, "float")
-            | TBool -> (5, "bool") | TChar -> (5, "char") | TString -> (5, "string")
-            | TModule s -> (5, s)
-            | TList t -> (3, to_s 0 t ^ " list")
-            | TTuple tl -> (3, "(" ^ s_list (to_s 4) " * " tl ^ ")")
-            | TFun (t1, t2) ->
-                let s1 = to_s 1 t1 in
-                let s2 = to_s 0 t2 in
-                (1, s1 ^ " -> " ^ s2)
-            | TVar (x, {contents=None}) ->
-                let y = try List.assoc x !dic
-                    with Not_found ->
-                        dic := (x, !counter) :: !dic;
-                        let n = !counter in
-                        incr counter;
-                        n
-                in (5, "'" ^ int_to_alpha y)
-            | TVar (_, {contents=Some t}) ->
-                (3, to_s n t)
-        in
-        if m > n then str
-        else "(" ^ str ^ ")"
-    in to_s (-1) ty
 
 
 let rec s_value = function

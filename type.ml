@@ -414,6 +414,11 @@ let rec infer e =
             debug_print @@ "infer import " ^ mid;
             load_module mid aid;
             TUnit
+        | (ETypeDef (tvs, id, tysym), _) ->
+            debug_print @@ "type def " ^ id ^ " = " ^ s_typ (tysym.tys.body);
+            (*TODO*)
+            Symbol.insert_tysym id tysym;
+            TUnit
     in
     debug_out @@ "infer > " ^ s_typ_raw res;
     res

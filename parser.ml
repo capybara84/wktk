@@ -571,15 +571,152 @@ and parse_expr p =
     res
 
 (*
+typexpr_primary
+    = INT | FLOAT | CHAR | UNIT | BOOL | STRING | TVAR | typeconstr
+*)
+and parse_typexpr_primary p =
+    debug_in @@ "parse_typexpr_primary";
+    let res =
+        match token p with
+        | Id "int" -> next_token p; TInt
+        | Id "float" -> next_token p; TFloat
+        | Id "char" -> next_token p; TChar
+        | Id "unit" -> next_token p; TUnit
+        | Id "bool" -> next_token p; TBool
+        | Id "string" -> next_token p; TString
+        | _ -> (*TODO*) error (get_pos p) "syntax error typexpr_primary"
+    in
+    debug_out @@ "parse_typexpr_primary:" ^ s_typ res;
+    res
+(*
+TODO
+typexpr_ctor
+    = typexpr_primary
+--
+typexpr_ctor
+    = typexpr_primary [typeconstr]
+*)
+and parse_typexpr_ctor p =
+    debug_in @@ "parse_typexpr_ctor";
+    let res =
+        parse_typexpr_primary p
+    in
+    debug_out @@ "parse_typexpr_ctor:" ^ s_typ res;
+    res
+
+(*
+typexpr_tuple
+    = typexpr_ctor {'*' typexpr_ctor}
+*)
+and parse_typexpr_tuple p =
+    debug_in @@ "parse_typexpr_tuple";
+    let t = parse_typexpr_ctor p in
+    let rec loop res =
+        if token p = STAR then begin
+            next_token p;
+            skip_newline p;
+            loop ((parse_typexpr_ctor p) :: res)
+        end else List.rev res
+    in
+    let res =
+        if token p = STAR then
+            TTuple (loop [t])
+        else t
+    in
+    debug_out @@ "parse_typexpr_tuple:" ^ s_typ res;
+    res
+
+(*
+typexpr
+    = typexpr_tuple ['->' typexpr]
+--
+typexpr
+    = typexpr_tuple ['->' typexpr]
+typexpr_tuple
+    = typexpr_ctor {'*' typexpr_ctor}
+typexpr_ctor
+    = ( '(' typexpr {',' typexpr} ')' | typexpr_primary ) [typeconstr]
+typexpr_primary
+    = INT | FLOAT | CHAR | UNIT | BOOL | STRING | TVAR | typeconstr
+typeconstr
+    = {ID '.'} ID
+constr_decl
+    = ID [typexpr {'*' typexpr}]
+field_decl
+    = [MUT] ID ':' typexpr
+*)
+and parse_typexpr p =
+    debug_in @@ "parse_typexpr";
+    let res =
+        let tyd = parse_typexpr_tuple p in
+        match token p with
+        | ARROW ->
+            next_token p;
+            skip_newline p;
+            let tyr = parse_typexpr p in
+            TFun (tyd, tyr)
+        | _ -> tyd
+    in
+    debug_out @@ "parse_typexpr:" ^ s_typ res;
+    res
+
+(*
+type_representation
+    = typexpr
+---
+type_representation
+    = '|' constr_decl {'|' constr_decl }
+    | '{' field_decl ';' {field_decl ';' } '}'
+    | typexpr
+*)
+and parse_type_representation p =
+    debug_in @@ "parse_type_representation";
+    let res =
+        (*TODO*)
+        parse_typexpr p
+    in
+    debug_out @@ "parse_type_representation:" ^ s_typ res;
+    res
+
+(*
+type_decl
+    = ID '=' type_representation
+---
+type_decl
+    = [type_params] ID '=' type_representation
+type_params
+    = TVAR
+    | '(' TVAR {',' TVAR} ')'
+*)
+and parse_type_decl p =
+    debug_in @@ "parse_type_decl";
+    let res =
+        (*TODO*)
+        match token p with
+        | Id id ->
+            next_token p;
+            expect p EQ;
+            skip_newline p;
+            let pos = get_pos p in
+            let ty = parse_type_representation p in
+            let tysym = {tys=make_typ_scheme [] ty; is_mutable=false} in
+            make_expr (ETypeDef ([], id, tysym)) pos (*TODO*)
+        | _ -> error (get_pos p) "syntax error (type_decl)"
+    in
+    debug_out @@ "parse_type_decl:" ^ s_expr res;
+    res
+
+(*
 type_def
     = TYPE type_decl 
 *)
 and parse_type_def p =
     debug_in "parse_type_def";
     let res =
-        (*TODO*)
         next_token p;
-        make_expr EUnit (get_pos p)
+        let e = parse_type_decl p in
+        skip_newline p;
+        e
     in
     debug_out @@ "parse_type_def:" ^ s_expr res;
     res

@@ -1,7 +1,12 @@
 
-
+*type ETypeDefとかEDecl の引数をtyp_symにしているが、typ_schemeかtypでいいのでは？
+    -> typ_expr と typ_decl にした。
+    ID で検索して型を割り当てる、みたいな前処理が必要なので。
+    parse後、infer時かなんかに。
+あちこちにあるtysym={tys=...;is_mutable=}を関数かなにかにしたい
 type
     named 途中
+
     decl
 
 record

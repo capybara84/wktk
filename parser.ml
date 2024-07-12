@@ -578,30 +578,46 @@ and parse_typexpr_primary p =
     debug_in @@ "parse_typexpr_primary";
     let res =
         match token p with
-        | Id "int" -> next_token p; TInt
-        | Id "float" -> next_token p; TFloat
-        | Id "char" -> next_token p; TChar
-        | Id "unit" -> next_token p; TUnit
-        | Id "bool" -> next_token p; TBool
-        | Id "string" -> next_token p; TString
+        | Id id -> next_token p; EName id
+        | TypId n -> next_token p; EVar n
         | _ -> (*TODO*) error (get_pos p) "syntax error typexpr_primary"
     in
-    debug_out @@ "parse_typexpr_primary:" ^ s_typ res;
+    debug_out @@ "parse_typexpr_primary:" ^ s_typ_expr res;
     res
+
 (*
-TODO
+typeconstr
+    = {ID '.'} ID
+*)
+and parse_typeconstr p =
+    debug_in @@ "parse_typeconstr";
+    let res =
+        match token p with
+        | Id id ->
+            next_token p;
+            EName id
+        (*TODO*)
+        | _ -> error (get_pos p) "type constructor syntax error"
+    in
+    debug_out @@ "parse_typeconstr:" ^ s_typ_expr res;
+    res
+
+(*
 typexpr_ctor
-    = typexpr_primary
---
-typexpr_ctor
-    = typexpr_primary [typeconstr]
+    = typexpr_primary {typeconstr}
 *)
 and parse_typexpr_ctor p =
     debug_in @@ "parse_typexpr_ctor";
-    let res =
-        parse_typexpr_primary p
+    let lhs = parse_typexpr_primary p in
+    let rec loop lhs =
+        match token p with
+        | Id _ ->
+            let rhs = parse_typeconstr p in
+            loop (EConstr (lhs, rhs))
+        | _ -> lhs
     in
-    debug_out @@ "parse_typexpr_ctor:" ^ s_typ res;
+    let res = loop lhs in
+    debug_out @@ "parse_typexpr_ctor:" ^ s_typ_expr res;
     res
 
 (*
@@ -610,7 +626,7 @@ typexpr_tuple
 *)
 and parse_typexpr_tuple p =
     debug_in @@ "parse_typexpr_tuple";
-    let t = parse_typexpr_ctor p in
+    let te = parse_typexpr_ctor p in
     let rec loop res =
         if token p = STAR then begin
             next_token p;
@@ -620,10 +636,10 @@ and parse_typexpr_tuple p =
     in
     let res =
         if token p = STAR then
-            TTuple (loop [t])
-        else t
+            ETuple (loop [te])
+        else te
     in
-    debug_out @@ "parse_typexpr_tuple:" ^ s_typ res;
+    debug_out @@ "parse_typexpr_tuple:" ^ s_typ_expr res;
     res
 
 (*
@@ -648,16 +664,16 @@ field_decl
 and parse_typexpr p =
     debug_in @@ "parse_typexpr";
     let res =
-        let tyd = parse_typexpr_tuple p in
+        let tye = parse_typexpr_tuple p in
         match token p with
         | ARROW ->
             next_token p;
             skip_newline p;
             let tyr = parse_typexpr p in
-            TFun (tyd, tyr)
-        | _ -> tyd
+            EFun (tye, tyr)
+        | _ -> tye
     in
-    debug_out @@ "parse_typexpr:" ^ s_typ res;
+    debug_out @@ "parse_typexpr:" ^ s_typ_expr res;
     res
 
 (*
@@ -675,7 +691,7 @@ and parse_type_representation p =
         (*TODO*)
         parse_typexpr p
     in
-    debug_out @@ "parse_type_representation:" ^ s_typ res;
+    debug_out @@ "parse_type_representation:" ^ s_typ_expr res;
     res
 
 (*
@@ -698,9 +714,8 @@ and parse_type_decl p =
             expect p EQ;
             skip_newline p;
             let pos = get_pos p in
-            let ty = parse_type_representation p in
-            let tysym = {tys=make_typ_scheme [] ty; is_mutable=false} in
-            make_expr (ETypeDef ([], id, tysym)) pos (*TODO*)
+            let tye = parse_type_representation p in
+            make_expr (ETypeDef ([], id, EAlias tye)) pos (*TODO*)
         | _ -> error (get_pos p) "syntax error (type_decl)"
     in
     debug_out @@ "parse_type_decl:" ^ s_expr res;
@@ -800,16 +815,23 @@ and parse_id_def is_mutable p =
             begin
                 let pos = get_pos p in
                 next_token p;
-                let params = parse_params [] p in
-                expect p EQ;
-                skip_newline p;
-                let body = parse_expr p in
-                if params = [] then
-                    make_expr (EValDef (is_mutable, id, body)) pos
-                else
-                    make_expr (EFuncDef (id, List.fold_right
-                                    (fun a b -> make_expr (ELambda (a, b)) pos)
-                                    params body)) pos
+                if token p = COLON then begin
+                    next_token p;
+                    skip_newline p;
+                    let tye = parse_typexpr p in
+                    make_expr (EDecl (id, tye)) pos
+                end else begin
+                    let params = parse_params [] p in
+                    expect p EQ;
+                    skip_newline p;
+                    let body = parse_expr p in
+                    if params = [] then
+                        make_expr (EValDef (is_mutable, id, body)) pos
+                    else
+                        make_expr (EFuncDef (id, List.fold_right
+                                        (fun a b -> make_expr (ELambda (a, b)) pos)
+                                        params body)) pos
+                end
             end
         | tk -> error (get_pos p) @@ "syntax error at " ^ s_token tk ^ " (id_def)"
     in

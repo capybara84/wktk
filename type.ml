@@ -249,6 +249,26 @@ let infer_binary op tl tr pos =
         unify (TList tl) tr pos;
         tr
 
+
+let rec typ_from_expr = function
+    | EName "unit" -> TUnit
+    | EName "int" -> TInt
+    | EName "float" -> TFloat
+    | EName "bool" -> TBool
+    | EName "char" -> TChar
+    | EName "string" -> TString
+    | EName _ -> failwith "TODO"
+    | EVar n -> TVar (n, {contents=None})
+    | ETuple el -> TTuple (List.map typ_from_expr el)
+    | EFun (e1, e2) -> TFun (typ_from_expr e1, typ_from_expr e2)
+    | EConstr (e1, EName "list") -> TList (typ_from_expr e1)
+    | EConstr (e1, e2) -> failwith "TODO"
+
+let rec typ_from_decl = function
+    | EAlias e -> typ_from_expr e
+    | ERecord _
+    | EVariant _ -> failwith "TODO"
+
 let rec infer e = 
     debug_in "infer";
     let res =
@@ -414,11 +434,28 @@ let rec infer e =
             debug_print @@ "infer import " ^ mid;
             load_module mid aid;
             TUnit
-        | (ETypeDef (tvs, id, tysym), _) ->
-            debug_print @@ "type def " ^ id ^ " = " ^ s_typ (tysym.tys.body);
-            (*TODO*)
+        | (ETypeDef (tvs, id, tyd), _) ->
+            debug_print @@ "type def " ^ id ^ " = " ^ s_typ_decl tyd;
+            let ty = typ_from_decl tyd in
+            let tys = generalize ty in
+            let tysym = { tys = tys; is_mutable = false } in
             Symbol.insert_tysym id tysym;
             TUnit
+        | (EDecl (id, tye), pos) ->
+            debug_print @@ "decl " ^ id ^ " = " ^ s_typ_expr tye;
+            let ty = typ_from_expr tye in
+            (try
+                let tysym = Symbol.lookup_tysym id in
+                if not (decl_equal tysym.tys.body ty) then
+                    error pos @@ "Type mismatch between " ^ s_typ tysym.tys.body
+                                    ^ " and " ^ s_typ ty ^ " (decl)";
+                TUnit
+            with Not_found ->
+                let tys = generalize ty in
+                let tysym = { tys = tys; is_mutable = false } in
+                Symbol.insert_tysym id tysym;
+                TUnit)
+
     in
     debug_out @@ "infer > " ^ s_typ_raw res;
     res

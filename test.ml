@@ -25,6 +25,74 @@ let test_report () =
         if !n_fail = 0 then "0" else (red @@ string_of_int !n_fail)
 
 
+let s_binop_src = function
+    | BinAdd -> "BinAdd" | BinSub -> "BinSub" | BinMul -> "BinMul"
+    | BinDiv -> "BinDiv" | BinMod -> "BinMod" | BinLT -> "BinLT"
+    | BinLE -> "BinLE" | BinGT -> "BinGT" | BinGE -> "BinGE"
+    | BinEq -> "BinEq" | BinNeq -> "BinNeq"
+    | BinEql -> "BinEql" | BinNeql -> "BinNeql" | BinLOr -> "BinLOr"
+    | BinLAnd -> "BinLAnd" | BinCons -> "BinCons"
+let s_unop_src = function UNot -> "UNot" | UMinus -> "UMinus"
+
+let rec s_expr_src = function
+    | (EEof, _) -> "EEof"
+    | (EUnit, _) -> "EUnit"
+    | (ENil, _) -> "ENil"
+    | (EBool b, _) -> "(EBool " ^ string_of_bool b ^ ")"
+    | (EInt n, _) -> "(EInt " ^ string_of_int n ^ ")"
+    | (EFloat n, _) -> "(EFloat " ^ string_of_float n ^ ")"
+    | (EChar c, _) -> "(EChar '" ^ (String.make 1 c) ^ "')"
+    | (EString s, _) -> "(EString \"" ^ s ^ "\")"
+    | (EId s, _) -> "(EId \"" ^ s ^ "\")"
+    | (EModule s, _) -> "(EModule \"" ^ s ^ "\")"
+    | (EImport (s, None), _) -> "(EImport (\"" ^ s ^ "\", None))"
+    | (EImport (s, Some a), _) -> "(EImport (\"" ^ s ^ "\", Some \"" ^ a ^ "\"))"
+    | (ETuple el, _) -> "(ETuple [" ^ s_list s_expr_src "; " el ^ "])"
+    | (EUnary (op, e), _) -> "(EUnary (" ^ s_unop_src op ^ ", " ^ s_expr_src e ^ "))"
+    | (EBinary (op, lhs, rhs), _) ->
+        "(EBinary (" ^ s_binop_src op ^ ", " ^ s_expr_src lhs ^ ", " ^ s_expr_src rhs ^ "))"
+    | (EApply (f, a), _) -> "(EApply (" ^ s_expr_src f ^ ", " ^ s_expr_src a ^ "))"
+    | (ELet (ll, e), _) ->
+        "(ELet ([" ^ s_list s_expr_src "; " ll ^ "], " ^ s_expr_src e ^ "))"
+    | (EValDef (b, id, e), _) ->
+        "(EValDef (" ^ string_of_bool b ^ ", \"" ^ id ^ "\", " ^ s_expr_src e ^ "))"
+    | (EFuncDef (id, e), _) ->
+        "(EFuncDef (\"" ^ id ^ "\", " ^ s_expr_src e ^ "))"
+    | (ELambda (a, b), _) -> "(ELambda (" ^ s_expr_src a ^ ", " ^ s_expr_src b ^ "))"
+    | (ECond (c, t, e), _) ->
+        "(ECond (" ^ s_expr_src c ^ ", " ^ s_expr_src t ^ ", " ^ s_expr_src e ^ "))"
+    | (EAssign (lhs, rhs), _) ->
+        "(EAssign (" ^ s_expr_src lhs ^ ", " ^ s_expr_src rhs ^ "))"
+    | (EMessage (lhs, s), _) -> "(EMessage (" ^ s_expr_src lhs ^ ", \"" ^ s ^ "\"))"
+    | (EBlock el, _) -> "(EBlock [" ^ s_list s_expr "; " el ^ "])"
+    | (ESeq el, _) -> "(ESeq [" ^ s_list s_expr ";\n" el ^ "])"
+    | (ETypeDef (fs, id, tyd), _) ->
+        "(ETypeDef ([" ^ s_list string_of_int ";" fs ^ "], \"" ^ id ^ "\", " ^ s_typ_decl_src tyd ^ "))"
+    | (EDecl (id, tye), _) ->
+        "(EDecl (\"" ^ id ^ "\", " ^ s_typ_expr_src tye ^ "))"
+
+and s_typ_expr_src = function
+    | EName id -> "(EName \"" ^ id ^ "\")"
+    | EVar n -> "(EVar " ^ int_to_alpha n ^ ")"
+    | ETuple tl -> "(ETuple [" ^ s_list s_typ_expr_src ";" tl ^ "])"
+    | EFun (t1, t2) -> "(EFun (" ^ s_typ_expr_src t1 ^ ", " ^ s_typ_expr_src t2 ^ "))"
+    | EConstr (t1, t2) -> "(EConstr (" ^ s_typ_expr_src t1 ^ ", " ^ s_typ_expr_src t2 ^ "))"
+
+and s_typ_decl_src = function
+    | EAlias tye -> "(EAlias " ^ s_typ_expr_src tye ^ ")"
+    | ERecord rl -> "(ERecord [" ^ s_list s_typ_record_src ";" rl ^ "])"
+    | EVariant vl -> "(EVariant [" ^ s_list s_typ_variant_src ";" vl ^ "])"
+
+and s_typ_record_src = function
+    | (id, b, te) ->
+        "\"" ^ id ^ "\", " ^ string_of_bool b ^ ", " ^ s_typ_expr_src te
+
+and s_typ_variant_src = function
+    | (id, None) -> "(\"" ^ id ^ "\", None)"
+    | (id, Some te) -> "(\"" ^ id ^ "\", Some " ^ s_typ_expr_src te ^ ")"
+
+
+
 let scanner_test_text = "a
 /* test
     /* nest */
@@ -103,59 +171,62 @@ let scanner_test () =
         | Sys_error s -> print_endline s
 
 let parser_test_data = [
-    (";");
-    ("\n\n;\n");
-    ("let one = 1 in one");
-    ("let _ = 2 in ()");
-    ("let id x = x in id 0");
-    ("let add x y = x + y in add 1 2");
-    ("let foo () = () in foo");
-    ("let bar _ = () in bar ()");
-    ("let _ = 1 in ()");
-    ("let one = 1; two = 2 in one + two");
-    ("let mut var = 1 in var <- 2");
-    ("if 1 == 1 then 2 else 3");
-    ("fn x -> x");
-    ("fn x y -> x + y");
-    ("x <- 1");
-    ("1 ? 2 : 3");
-    ("1 || 2");
-    ("1 && 2");
-    ("1 < 2");
-    ("1 <= 2");
-    ("1 > 2");
-    ("1 >= 2");
-    ("1 == 2");
-    ("1 != 2");
-    ("1 = 2");
-    ("1 <> 2");
-    ("1::2");
-    ("1::2::[3]");
-    ("1 + 2 - 3");
-    ("1 - 2 * 3");
-    ("1 - 2 / 3");
-    ("1 - 2 % 3");
-    ("foo ()");
-    ("foo 1");
-    ("bar 1 2");
-    ("-1");
-    ("!2");
-    ("'a'");
-    ("\"abc\"");
-    ("[1,2,3]");
-    ("[]");
-    ("()");
-    ("[ ]");
+    (";", "EEof");
+    ("\n\n;\n", "EEof");
+    ("let one = 1 in one", "(ELet ([(EValDef (false, \"one\", (EInt 1)))], (EId \"one\")))");
+    ("let _ = 2 in ()", "(ELet ([(EValDef (false, \"_\", (EInt 2)))], EUnit))");
+    ("let id x = x in id 0", "(ELet ([(EFuncDef (\"id\", (ELambda ((EId \"x\"), (EId \"x\")))))], (EApply ((EId \"id\"), (EInt 0)))))");
+    ("let add x y = x + y in add 1 2", "(ELet ([(EFuncDef (\"add\", (ELambda ((EId \"x\"), (ELambda ((EId \"y\"), (EBinary (BinAdd, (EId \"x\"), (EId \"y\")))))))))], (EApply ((EApply ((EId \"add\"), (EInt 1))), (EInt 2)))))");
+    ("let foo () = () in foo", "(ELet ([(EFuncDef (\"foo\", (ELambda (EUnit, EUnit))))], (EId \"foo\")))");
+    ("let bar _ = () in bar ()", "(ELet ([(EFuncDef (\"bar\", (ELambda ((EId \"_\"), EUnit))))], (EApply ((EId \"bar\"), EUnit))))");
+    ("let _ = 1 in ()", "(ELet ([(EValDef (false, \"_\", (EInt 1)))], EUnit))");
+    ("let one = 1; two = 2 in one + two", "(ELet ([(EValDef (false, \"one\", (EInt 1))); (EValDef (false, \"two\", (EInt 2)))], (EBinary (BinAdd, (EId \"one\"), (EId \"two\")))))");
+    ("let mut var = 1 in var <- 2", "(ELet ([(EValDef (true, \"var\", (EInt 1)))], (EAssign ((EId \"var\"), (EInt 2)))))");
+    ("if 1 == 1 then 2 else 3", "(ECond ((EBinary (BinEql, (EInt 1), (EInt 1))), (EInt 2), (EInt 3)))");
+    ("fn x -> x", "(ELambda ((EId \"x\"), (EId \"x\")))");
+    ("fn x y -> x + y", "(ELambda ((EId \"x\"), (ELambda ((EId \"y\"), (EBinary (BinAdd, (EId \"x\"), (EId \"y\")))))))");
+    ("x <- 1", "(EAssign ((EId \"x\"), (EInt 1)))");
+    ("1 ? 2 : 3", "(ECond ((EInt 1), (EInt 2), (EInt 3)))");
+    ("1 || 2", "(EBinary (BinLOr, (EInt 1), (EInt 2)))");
+    ("1 && 2", "(EBinary (BinLAnd, (EInt 1), (EInt 2)))");
+    ("1 < 2", "(EBinary (BinLT, (EInt 1), (EInt 2)))");
+    ("1 <= 2", "(EBinary (BinLE, (EInt 1), (EInt 2)))");
+    ("1 > 2", "(EBinary (BinGT, (EInt 1), (EInt 2)))");
+    ("1 >= 2", "(EBinary (BinGE, (EInt 1), (EInt 2)))");
+    ("1 == 2", "");
+    ("1 != 2", "");
+    ("1 = 2", "");
+    ("1 <> 2", "");
+    ("1::2", "");
+    ("1::2::[3]", "");
+    ("1 + 2 - 3", "");
+    ("1 - 2 * 3", "");
+    ("1 - 2 / 3", "");
+    ("1 - 2 % 3", "");
+    ("foo ()", "");
+    ("foo 1", "");
+    ("bar 1 2", "");
+    ("-1", "");
+    ("!2", "");
+    ("'a'", "");
+    ("\"abc\"", "(EString \"abc\")");
+    ("[1,2,3]", "(EBinary (BinCons, (EInt 1), (EBinary (BinCons, (EInt 2), (EBinary (BinCons, (EInt 3), ENil))))))");
+    ("[]", "ENil");
+    ("()", "EUnit");
+    ("[ ]", "ENil");
 ]
 
 let parser_test () =
     print_string "Parser Test: ";
-    let do_test txt =
+    let do_test (txt, expected) =
         try
             verbose @@ "parse: " ^ txt;
             let e = Parser.parse_text true txt in
-            verbose @@ "result: " ^ s_expr e;
-            test_ok()
+            verbose @@ "result: " ^ s_expr_src e;
+            if String.equal (s_expr_src e) expected then
+                test_ok()
+            else
+                test_fail (s_expr_src e ^ " <> " ^ expected)
         with
             | Error (pos, msg) -> test_fail @@ s_pos pos ^ "Error: " ^ msg
             | End_of_file -> test_fail "End_of_file"
@@ -322,7 +393,7 @@ let eval_test_data = [
     ("let mut x = 1 in\n  x <- 2\n  x", VInt 2);
     ("let x = 1; y = 2 in x + y", VInt 3);
     ("module A", VUnit);
-    ("List.length [1,2]", VInt 2);
+    ("let length x = x = [] ? 0 : 1 + length (List.tl x) in length [1,2]", VInt 2);
     ("[1,2] + [3]", VCons(VInt 1, VCons(VInt 2, VCons(VInt 3, VNil))));
     ("\"ab\" + ['c']", VCons (VChar 'a', VCons (VChar 'b', VCons (VChar 'c', VNil))));
     ("(1,2)", VTuple [VInt 1;VInt 2]);

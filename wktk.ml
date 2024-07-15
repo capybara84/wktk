@@ -45,12 +45,15 @@ let () =
         (fun name -> filenames := name :: !filenames)
         "usage: wktk [-v][-ds][-dp][-dt][-de][-ns][-np][-nt][-ne] filename...";
 
-    ignore @@ Type.load_source "builtins.wt";
-
     if !do_test then
         Test.test ()
-    else if !filenames <> [] then
-        List.iter (fun name -> ignore @@ Type.load_source name) !filenames
-    else
-        repl ()
+    else begin
+
+        ignore @@ Type.load_source "builtins.wt";
+
+        if !filenames <> [] then
+            List.iter (fun name -> ignore @@ Type.load_source name) !filenames
+        else
+            repl ()
+    end
 

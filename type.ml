@@ -257,17 +257,17 @@ let rec typ_from_expr = function
     | EName "bool" -> TBool
     | EName "char" -> TChar
     | EName "string" -> TString
-    | EName _ -> failwith "TODO"
+    | EName id -> failwith "EName TODO"
     | EVar n -> TVar (n, {contents=None})
     | ETuple el -> TTuple (List.map typ_from_expr el)
     | EFun (e1, e2) -> TFun (typ_from_expr e1, typ_from_expr e2)
     | EConstr (e1, EName "list") -> TList (typ_from_expr e1)
-    | EConstr (e1, e2) -> failwith "TODO"
+    | EConstr (e1, e2) -> failwith "EConstr TODO"
 
 let rec typ_from_decl = function
     | EAlias e -> typ_from_expr e
     | ERecord _
-    | EVariant _ -> failwith "TODO"
+    | EVariant _ -> failwith "EVariant TODO"
 
 let rec infer e = 
     debug_in "infer";

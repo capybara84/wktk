@@ -28,6 +28,10 @@ let rec s_typ_raw ty =
             | TUnit -> (5, "unit") | TInt -> (5, "int") | TFloat -> (5, "float")
             | TBool -> (5, "bool") | TChar -> (5, "char") | TString -> (5, "string")
             | TModule s -> (5, s)
+            | TConstr (t1, t2) ->
+                let s1 = to_s 1 t1 in
+                let s2 = to_s 0 t2 in
+                (1, s1 ^ " " ^ s2)
             | TList t -> (3, to_s 0 t ^ " list")
             | TTuple tl -> (3, s_list (to_s 4) " * " tl)
             | TFun (t1, t2) ->
@@ -49,6 +53,7 @@ let get_pos x = (snd x)
 let rec equal t1 t2 =
     match (t1, t2) with
     | (a, b) when a == b -> true
+    | (TConstr (t11, t12), TConstr (t21, t22)) -> equal t11 t21 && equal t12 t22
     | (TList TChar, TString) | (TString, TList TChar) -> true
     | (TList t1, TList t2) -> equal t1 t2
     | (TTuple tl1, TTuple tl2) -> list_equal (tl1, tl2)
@@ -77,6 +82,7 @@ let reloc_tvar t =
     let rec conv t =
         match t with
         | TUnit | TInt | TFloat | TBool | TChar | TString | TModule _ -> t
+        | TConstr (t1, t2) -> TConstr (conv t1, conv t2)
         | TList t -> TList (conv t)
         | TTuple tl -> TTuple (List.map conv tl)
         | TFun (t1, t2) -> TFun (conv t1, conv t2)
@@ -101,6 +107,7 @@ let rec is_type t1 t2 =
     match (t1, t2) with
     | (TVar (_, {contents=Some t1'}), _) -> is_type t1' t2
     | (_, TVar (_, {contents=Some t2'})) -> is_type t1 t2'
+    | (TConstr (t11,t12), TConstr (t21,t22)) -> is_type t11 t21 && is_type t12 t22
     | (TList TChar, TString) | (TString, TList TChar) -> true
     | (TList t1, TList t2) -> is_type t1 t2
     | (TTuple tl1, TTuple tl2) -> list_is_type (tl1, tl2)
@@ -140,6 +147,7 @@ let rec occurs_in_type t t2 =
         match t2 with
         | TList t' -> occurs_in_type t t'
         | TTuple tl -> occurs_in t tl
+        | TConstr (tf1, tf2) -> occurs_in t [tf1;tf2]
         | TFun (tf1, tf2) -> occurs_in t [tf1;tf2]
         | _ -> false
 
@@ -158,6 +166,9 @@ let rec unify t1 t2 pos =
         unify tl tr pos
     | (TTuple tl1, TTuple tl2) when List.length tl1 = List.length tl2 ->
         List.iter2 (fun x y -> unify x y pos) tl1 tl2
+    | (TConstr (t11,t12), TConstr (t21,t22)) ->
+        unify t11 t21 pos;
+        unify t12 t22 pos
     | (TFun (t11,t12), TFun (t21,t22)) ->
         unify t11 t21 pos;
         unify t12 t22 pos
@@ -187,6 +198,7 @@ let rec unify t1 t2 pos =
 let rec free_tyvars = function
     | TList t -> free_tyvars t
     | TTuple tl -> List.fold_left (fun fvs x -> fvs @ free_tyvars x) [] tl
+    | TConstr (t1, t2) -> free_tyvars t1 @ free_tyvars t2
     | TFun (t1, t2) -> free_tyvars t1 @ free_tyvars t2
     | TVar (x, {contents=None}) -> [x]
     | TVar (_, {contents=Some t}) -> free_tyvars t
@@ -203,6 +215,7 @@ let generalize ty =
 let rec substitute subst = function
     | TList t -> TList (substitute subst t)
     | TTuple tl -> TTuple (List.map (fun x -> substitute subst x) tl)
+    | TConstr (t1, t2) -> TConstr (substitute subst t1, substitute subst t2)
     | TFun (t1, t2) -> TFun (substitute subst t1, substitute subst t2)
     | TVar (x, {contents=None}) as t -> (try List.assoc x subst with Not_found -> t)
     | TVar (_, {contents=Some t}) -> substitute subst t
@@ -272,11 +285,14 @@ let rec typ_from_expr pos = function
     | TE_Tuple el -> TTuple (List.map (typ_from_expr pos) el)
     | TE_Fun (e1, e2) -> TFun (typ_from_expr pos e1, typ_from_expr pos e2)
     | TE_Constr (e1, TE_Name "list") -> TList (typ_from_expr pos e1)
-    | TE_Constr (e1, e2) -> failwith "TE_Constr TODO"
+    | TE_Constr (e1, e2) ->
+        let t1 = typ_from_expr pos e1 in
+        let t2 = typ_from_expr pos e2 in
+        TConstr (t1, t2)
 
 let rec typ_from_decl pos = function
     | TD_Alias e -> typ_from_expr pos e
-    | TD_Record _
+    | TD_Record _ -> failwith "TD_Record TODO"
     | TD_Variant _ -> failwith "TD_Variant TODO"
 
 let rec infer e = 

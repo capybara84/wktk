@@ -46,6 +46,7 @@ and token = token_decl * pos
 type typ =
     | TUnit | TInt | TFloat | TBool | TChar | TString
     | TModule of string
+    | TConstr of typ * typ
     | TList of typ
     | TTuple of typ list
     | TFun of typ * typ
@@ -175,6 +176,10 @@ let rec s_typ ty =
             | TUnit -> (5, "unit") | TInt -> (5, "int") | TFloat -> (5, "float")
             | TBool -> (5, "bool") | TChar -> (5, "char") | TString -> (5, "string")
             | TModule s -> (5, s)
+            | TConstr (t1, t2) ->
+                let s1 = to_s 1 t1 in
+                let s2 = to_s 0 t2 in
+                (1, s1 ^ " " ^ s2)
             | TList t -> (3, to_s 0 t ^ " list")
             | TTuple tl -> (3, "(" ^ s_list (to_s 4) " * " tl ^ ")")
             | TFun (t1, t2) ->

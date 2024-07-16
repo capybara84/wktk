@@ -39,10 +39,11 @@ typexpr
 typexpr_tuple
     = typexpr_ctor {'*' typexpr_ctor}
 typexpr_ctor
-    = ( '(' typexpr {',' typexpr} ')' | typexpr_primary ) {typeconstr}
+    = '(' typexpr {',' typexpr} ')' {typname}
+    | typexpr_primary {typname}
 typexpr_primary
-    = TVAR | typeconstr | '(' typexpr ')'
-typeconstr
+    = TVAR | typname | '(' typexpr ')'
+typname
     = {ID '.'} ID
 sep = ';' | NEWLINE
 

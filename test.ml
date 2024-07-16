@@ -74,7 +74,7 @@ let rec s_expr_src = function
 and s_typ_expr_src = function
     | TE_Name id -> "(TE_Name \"" ^ id ^ "\")"
     | TE_Message (e, id) -> "(TE_Message (" ^ s_typ_expr_src e ^ ", \"" ^ id ^ "\"))"
-    | TE_Var n -> "(TE_Var " ^ int_to_alpha n ^ ")"
+    | TE_Var n -> "(TE_Var " ^ string_of_int n ^ ")"
     | TE_Tuple tl -> "(TE_Tuple [" ^ s_list s_typ_expr_src ";" tl ^ "])"
     | TE_Fun (t1, t2) -> "(TE_Fun (" ^ s_typ_expr_src t1 ^ ", " ^ s_typ_expr_src t2 ^ "))"
     | TE_Constr (t1, t2) -> "(TE_Constr (" ^ s_typ_expr_src t1 ^ ", " ^ s_typ_expr_src t2 ^ "))"
@@ -86,7 +86,7 @@ and s_typ_decl_src = function
 
 and s_typ_record_src = function
     | (id, b, te) ->
-        "\"" ^ id ^ "\", " ^ string_of_bool b ^ ", " ^ s_typ_expr_src te
+        "(\"" ^ id ^ "\", " ^ string_of_bool b ^ ", " ^ s_typ_expr_src te ^ ")"
 
 and s_typ_variant_src = function
     | (id, None) -> "(\"" ^ id ^ "\", None)"
@@ -215,24 +215,40 @@ let parser_test_data = [
     ("[]", "ENil");
     ("()", "EUnit");
     ("[ ]", "ENil");
-    ("type c = char", "(ETypeDecl ([], \"c\", (TD_Alias (TE_Name \"char\"))))");
-    ("type f = unit -> int", "(ETypeDecl ([], \"f\", (TD_Alias (TE_Fun ((TE_Name \"unit\"), (TE_Name \"int\"))))))");
-    ("type t = (int * char)", "(ETypeDecl ([], \"t\", (TD_Alias (TE_Tuple [(TE_Name \"int\");(TE_Name \"char\")]))))");
-    ("type l = int list", "(ETypeDecl ([], \"l\", (TD_Alias (TE_Constr ((TE_Name \"int\"), (TE_Name \"list\"))))))");
-    ("type ITree = int tree", "(ETypeDecl ([], \"ITree\", (TD_Alias (TE_Constr ((TE_Name \"int\"), (TE_Name \"tree\"))))))");
-    ("type c = (float)", "(ETypeDecl ([], \"c\", (TD_Alias (TE_Name \"float\"))))");
-    ("type 'a x = 'a", "(ETypeDecl ([0], \"x\", (TD_Alias (EVar 0))))");
-    ("type 'a pair = 'a * 'a", "()");
-    ("type ('a, 'b) pair = 'a * 'b", "()");
-    ("type point2d = { mut x : int; mut y : int }", "");
-    ("type 'a point2d = { x : 'a; y : 'a }", "");
-    ("type point3d = {\n  mut x : float\n  mut y : float\n  mut z : float\n}", "");
-    ("type color = Red | Green | Blue", "");
-    ("type color = | Red | Green | Blue", "");
-    ("type color = Red | Green | Blue | RGB (int * int * int)", "");
-    ("type 'a option = None | Some 'a", "");
-    ("type 'a tree = Node 'a | Leaf ('a tree * 'a tree)", "");
-    ("type list = List.t", "(ETypeDecl ([], \"list\", (TD_Alias (TE_Message ((TE_Name \"List\"), \"t\")))))");
+    ("type c = char",
+        "(ETypeDecl ([], \"c\", (TD_Alias (TE_Name \"char\"))))");
+    ("type f = unit -> int",
+        "(ETypeDecl ([], \"f\", (TD_Alias (TE_Fun ((TE_Name \"unit\"), (TE_Name \"int\"))))))");
+    ("type t = (int * char)",
+        "(ETypeDecl ([], \"t\", (TD_Alias (TE_Tuple [(TE_Name \"int\");(TE_Name \"char\")]))))");
+    ("type l = int list",
+        "(ETypeDecl ([], \"l\", (TD_Alias (TE_Constr ((TE_Name \"int\"), (TE_Name \"list\"))))))");
+    ("type ITree = int tree",
+        "(ETypeDecl ([], \"ITree\", (TD_Alias (TE_Constr ((TE_Name \"int\"), (TE_Name \"tree\"))))))");
+    ("type c = (float)",
+        "(ETypeDecl ([], \"c\", (TD_Alias (TE_Name \"float\"))))");
+    ("type 'a x = 'a",
+        "(ETypeDecl ([0], \"x\", (TD_Alias (TE_Var 0))))");
+    ("type 'a pair = 'a * 'a",
+        "(ETypeDecl ([0], \"pair\", (TD_Alias (TE_Tuple [(TE_Var 0);(TE_Var 0)]))))");
+    ("type ('a, 'b) pair = 'a * 'b",
+        "(ETypeDecl ([0;1], \"pair\", (TD_Alias (TE_Tuple [(TE_Var 0);(TE_Var 1)]))))");
+    ("type list = List.t",
+        "(ETypeDecl ([], \"list\", (TD_Alias (TE_Message ((TE_Name \"List\"), \"t\")))))");
+    ("type color = | Red | Green | Blue",
+        "(ETypeDecl ([], \"color\", (TD_Variant [(\"Red\", None);(\"Green\", None);(\"Blue\", None)])))");
+    ("type color = | Red | Green | Blue | RGB (int * int * int)",
+        "(ETypeDecl ([], \"color\", (TD_Variant [(\"Red\", None);(\"Green\", None);(\"Blue\", None);(\"RGB\", Some (TE_Tuple [(TE_Name \"int\");(TE_Name \"int\");(TE_Name \"int\")]))])))");
+    ("type 'a option = | None | Some 'a",
+        "(ETypeDecl ([0], \"option\", (TD_Variant [(\"None\", None);(\"Some\", Some (TE_Var 0))])))");
+    ("type 'a tree = | Node 'a | Leaf ('a tree * 'a tree)",
+        "(ETypeDecl ([0], \"tree\", (TD_Variant [(\"Node\", Some (TE_Var 0));(\"Leaf\", Some (TE_Tuple [(TE_Constr ((TE_Var 0), (TE_Name \"tree\")));(TE_Constr ((TE_Var 0), (TE_Name \"tree\")))]))])))");
+    ("type point2d = { mut x : int; mut y : int }",
+        "(ETypeDecl ([], \"point2d\", (TD_Record [(\"x\", true, (TE_Name \"int\"));(\"y\", true, (TE_Name \"int\"))])))");
+    ("type 'a point2d = { x : 'a; y : 'a }",
+        "(ETypeDecl ([0], \"point2d\", (TD_Record [(\"x\", false, (TE_Var 0));(\"y\", false, (TE_Var 0))])))");
+    ("type point3d = {\n  mut x : float\n  mut y : float\n  mut z : float\n}",
+        "(ETypeDecl ([], \"point3d\", (TD_Record [(\"x\", true, (TE_Name \"float\"));(\"y\", true, (TE_Name \"float\"));(\"z\", true, (TE_Name \"float\"))])))");
 ]
 
 let parser_test () =

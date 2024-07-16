@@ -51,6 +51,23 @@ let rec skip_newline p =
     if token p = NEWLINE then
        (next_token p; skip_newline p)
 
+let rec skip_newline_indent p =
+    debug_print "skip_newline_indent";
+    match token p with
+    | NEWLINE | INDENT ->
+        next_token p;
+        skip_newline_indent p
+    | _ -> ()
+
+let rec skip_newline_dedent p =
+    debug_print "skip_newline_dedent";
+    match token p with
+    | NEWLINE | DEDENT ->
+        next_token p;
+        skip_newline_dedent p
+    | _ -> ()
+
+
 let skip_semi p =
     if token p = SEMI then
         next_token p
@@ -572,16 +589,14 @@ and parse_expr p =
 
 (*
 typexpr_primary
-    = TVAR | typeconstr | '(' typexpr ')'
-
-//    = INT | FLOAT | CHAR | UNIT | BOOL | STRING | TVAR | typeconstr
+    = TVAR | typname | '(' typexpr ')'
 *)
 and parse_typexpr_primary p =
     debug_in @@ "parse_typexpr_primary";
     let res =
         match token p with
         | TypId n -> next_token p; TE_Var n
-        | Id _ -> parse_typeconstr p
+        | Id _ -> parse_typname p
         | LPAR ->
             next_token p;
             let e = parse_typexpr p in
@@ -593,11 +608,11 @@ and parse_typexpr_primary p =
     res
 
 (*
-typeconstr
+typname
     = {ID '.'} ID
 *)
-and parse_typeconstr p =
-    debug_in @@ "parse_typeconstr";
+and parse_typname p =
+    debug_in @@ "parse_typname";
     let res =
         match token p with
         | Id id ->
@@ -616,20 +631,25 @@ and parse_typeconstr p =
             loop e
         | tk -> error (get_pos p) @@ "syntax error at '" ^ s_token tk ^ "' (type)"
     in
-    debug_out @@ "parse_typeconstr:" ^ s_typ_expr res;
+    debug_out @@ "parse_typname:" ^ s_typ_expr res;
     res
 
 (*
 typexpr_ctor
-    = typexpr_primary {typeconstr}
+    = typexpr_primary {typname}
+--
+typexpr_ctor
+    = '(' typexpr {',' typexpr} ')' {typname}
+    | typexpr_primary {typname}
 *)
 and parse_typexpr_ctor p =
     debug_in @@ "parse_typexpr_ctor";
+    (*TODO*)
     let lhs = parse_typexpr_primary p in
     let rec loop lhs =
         match token p with
         | Id _ ->
-            let rhs = parse_typeconstr p in
+            let rhs = parse_typname p in
             loop (TE_Constr (lhs, rhs))
         | _ -> lhs
     in
@@ -662,21 +682,6 @@ and parse_typexpr_tuple p =
 (*
 typexpr
     = typexpr_tuple ['->' typexpr]
---
-typexpr
-    = typexpr_tuple ['->' typexpr]
-typexpr_tuple
-    = typexpr_ctor {'*' typexpr_ctor}
-typexpr_ctor
-    = ( '(' typexpr {',' typexpr} ')' | typexpr_primary ) [typeconstr]
-typexpr_primary
-    = INT | FLOAT | CHAR | UNIT | BOOL | STRING | TVAR | typeconstr
-typeconstr
-    = {ID '.'} ID
-constr_decl
-    = ID [typexpr {'*' typexpr}]
-field_decl
-    = [MUT] ID ':' typexpr
 *)
 and parse_typexpr p =
     debug_in @@ "parse_typexpr";
@@ -694,27 +699,123 @@ and parse_typexpr p =
     res
 
 (*
-type_representation
-    = typexpr
----
-type_representation
+constr_decl
+    = ID [typexpr]
+*)
+and parse_constr_decl p =
+    let is_begin_tyexp = function | LPAR | Id _ | TypId _ -> true | _ -> false
+    in
+    debug_in @@ "parse_constr_decl";
+    let res =
+        match token p with
+        | Id id ->
+            next_token p;
+            if is_begin_tyexp (token p) then
+                let e = parse_typexpr p in
+                (id, Some e)
+            else
+                (id, None)
+        | tk -> error (get_pos p) @@ "syntax error at '" ^ s_token tk ^ "' (constr_decl)"
+    in
+    debug_out @@ "parse_constr_decl";
+    res
+
+(*
+type_rep_variant
     = '|' constr_decl {'|' constr_decl }
-    | '{' field_decl ';' {field_decl ';' } '}'
+*)
+and parse_tyrep_variant p =
+    debug_in @@ "parse_tyrep_variant";
+    next_token p;
+    let rec loop lst =
+        let cd = parse_constr_decl p in
+        skip_newline p;
+        if token p = OR then begin
+            next_token p;
+            loop (cd::lst)
+        end else
+            List.rev (cd::lst)
+    in
+    let lst = loop [] in
+    let res = TD_Variant lst in
+    debug_out @@ "parse_tyrep_variant";
+    res
+
+(*
+field_decl
+    = [MUT] ID ':' typexpr
+*)
+and parse_field_decl p =
+    debug_in @@ "parse_field_decl";
+    let ism =
+        if token p = MUT then begin
+            next_token p;
+            true
+        end else false
+    in
+    let res =
+        match token p with
+        | Id id ->
+            next_token p;
+            expect p COLON;
+            let e = parse_typexpr p in
+            (id, ism, e)
+        | tk -> error (get_pos p) @@ "identifier expected at '" ^ s_token tk ^ "'"
+    in
+    debug_out @@ "parse_field_decl";
+    res
+
+(*
+type_rep_record
+    = '{' field_decl ';' {field_decl ';' } '}'
+*)
+and parse_tyrep_record p =
+    debug_in @@ "parse_tyrep_record";
+    next_token p;
+    skip_newline_indent p;
+    let rec loop lst =
+        let rd = parse_field_decl p in
+        skip_newline p;
+        if token p <> NEWLINE && token p <> END && token p <> DEDENT then begin
+            skip_semi p;
+            skip_newline p;
+            loop (rd::lst)
+        end else
+            List.rev (rd::lst)
+    in
+    let lst = loop [] in
+    skip_newline_dedent p;
+    expect p END;
+    let res = TD_Record lst in
+    debug_out @@ "parse_tyrep_record";
+    res
+
+(*
+type_representation
+    = tyrep_variant
+    | tyrep_record
     | typexpr
 *)
 and parse_type_representation p =
     debug_in @@ "parse_type_representation";
     let res =
-        (*TODO*)
-        parse_typexpr p
+        match token p with
+        | OR -> parse_tyrep_variant p
+        | BEGIN -> parse_tyrep_record p
+        | _ -> TD_Alias (parse_typexpr p)
     in
-    debug_out @@ "parse_type_representation:" ^ s_typ_expr res;
+    debug_out @@ "parse_type_representation:" ^ s_typ_decl res;
     res
 
+and parse_tvar p =
+    match token p with
+    | TypId n ->
+        next_token p;
+        n
+    | _ ->
+        error (get_pos p) "expect type variable"
+
 (*
-type_decl
-    = ID '=' type_representation
----
 type_decl
     = [type_params] ID '=' type_representation
 type_params
@@ -723,16 +824,36 @@ type_params
 *)
 and parse_type_decl p =
     debug_in @@ "parse_type_decl";
+    let nl =
+        match token p with
+        | TypId n ->
+            next_token p;
+            [n]
+        | LPAR ->
+            next_token p;
+            let n = parse_tvar p in
+            let rec loop nl =
+                if token p = COMMA then begin
+                    next_token p;
+                    let n = parse_tvar p in
+                    loop (n::nl)
+                end else begin
+                    expect p RPAR;
+                    List.rev nl
+                end
+            in
+            loop [n]
+        | _ -> []
+    in
     let res =
-        (*TODO*)
         match token p with
         | Id id ->
             next_token p;
             expect p EQ;
             skip_newline p;
             let pos = get_pos p in
-            let tye = parse_type_representation p in
-            make_expr (ETypeDecl ([], id, TD_Alias tye)) pos (*TODO*)
+            let tyd = parse_type_representation p in
+            make_expr (ETypeDecl (nl, id, tyd)) pos
         | tk -> error (get_pos p) @@ "syntax error at '" ^ s_token tk ^ "' (type_decl)"
     in
     debug_out @@ "parse_type_decl:" ^ s_expr res;

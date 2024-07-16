@@ -132,6 +132,13 @@ and
 and
     env = (string * symbol) list
 
+
+let int_to_alpha x =
+    if x <= Char.code 'z' - Char.code 'a' then
+        String.make 1 (Char.chr ((Char.code 'a') + x))
+    else
+        string_of_int x
+
 let rec s_list to_s sep = function
     | [] -> ""
     | [x] -> to_s x
@@ -145,7 +152,7 @@ let s_token = function
     | Char c -> "'" ^ (String.make 1 c) ^ "'"
     | String s -> "\"" ^ s ^ "\""
     | Id s -> s
-    | TypId n -> "'" ^ string_of_int n
+    | TypId n -> "'" ^ int_to_alpha n
     | MODULE -> "module" | IMPORT -> "import" | AS -> "as"
     | TYPE -> "type" | LET -> "let" | IN -> "in"|  MUT -> "mut"
     | FN -> "fn" | IF -> "if" | THEN -> "then" | ELSE -> "else"
@@ -157,12 +164,6 @@ let s_token = function
     | LT -> "<" | LE -> "<=" | GT -> ">" | GE -> ">=" | PLUS -> "+" | MINUS -> "-"
     | STAR -> "*" | SLASH -> "/" | PERCENT -> "%"
     | QUES -> "?" | UNIT -> "()" | NIL -> "[]"
-
-let int_to_alpha x =
-    if x <= Char.code 'z' - Char.code 'a' then
-        String.make 1 (Char.chr ((Char.code 'a') + x))
-    else
-        string_of_int x
 
 let rec s_typ ty =
     let counter = ref 0 in

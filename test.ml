@@ -216,7 +216,7 @@ let parser_test_data = [
     ("[ ]", "ENil");
     ("type c = char", "(ETypeDef ([], \"c\", (EAlias (EName \"char\"))))");
     ("type f = unit -> int", "(ETypeDef ([], \"f\", (EAlias (EFun ((EName \"unit\"), (EName \"int\"))))))");
-    ("type t = int * char", "(ETypeDef ([], \"t\", (EAlias (ETuple [(EName \"int\");(EName \"char\")]))))");
+    ("type t = (int * char)", "(ETypeDef ([], \"t\", (EAlias (ETuple [(EName \"int\");(EName \"char\")]))))");
     ("type l = int list", "(ETypeDef ([], \"l\", (EAlias (EConstr ((EName \"int\"), (EName \"list\"))))))");
     ("type ITree = int tree", "(ETypeDef ([], \"ITree\", (EAlias (EConstr ((EName \"int\"), (EName \"tree\"))))))");
     ("type c = (float)", "(ETypeDef ([], \"c\", (EAlias (EName \"float\"))))");

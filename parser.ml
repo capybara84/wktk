@@ -192,7 +192,7 @@ and parse_simple_expr p =
                 expect p RPAR;
                 e
             end
-        | tk -> error (get_pos p) @@ "syntax error at " ^ s_token tk ^ " (simple_expr)"
+        | tk -> error (get_pos p) @@ "syntax error at '" ^ s_token tk ^ "' (simple_expr)"
     in
     debug_out @@ "parse_simple_expr:" ^ s_expr res;
     res
@@ -535,7 +535,7 @@ and parse_let_expr p =
                 skip_newline p;
                 skip_dedent p;
                 loop (e :: acc)
-            | tk -> error (get_pos p) @@ "syntax error at " ^ s_token tk ^ " (let)"
+            | tk -> error (get_pos p) @@ "syntax error at '" ^ s_token tk ^ "' (let)"
         end
     in
     let el = loop [] in
@@ -587,7 +587,7 @@ and parse_typexpr_primary p =
             let e = parse_typexpr p in
             expect p RPAR;
             e
-        | tk -> error (get_pos p) @@ "syntax error at " ^ s_token tk ^ " (typexpr_primary)"
+        | tk -> error (get_pos p) @@ "syntax error at '" ^ s_token tk ^ "' (typexpr_primary)"
     in
     debug_out @@ "parse_typexpr_primary:" ^ s_typ_expr res;
     res
@@ -604,7 +604,7 @@ and parse_typeconstr p =
             next_token p;
             EName id
         (*TODO*)
-        | _ -> error (get_pos p) "type constructor syntax error"
+        | tk -> error (get_pos p) @@ "syntax error at '" ^ s_token tk ^ "' (type constructor)"
     in
     debug_out @@ "parse_typeconstr:" ^ s_typ_expr res;
     res
@@ -723,7 +723,7 @@ and parse_type_decl p =
             let pos = get_pos p in
             let tye = parse_type_representation p in
             make_expr (ETypeDef ([], id, EAlias tye)) pos (*TODO*)
-        | _ -> error (get_pos p) "syntax error (type_decl)"
+        | tk -> error (get_pos p) @@ "syntax error at '" ^ s_token tk ^ "' (type_decl)"
     in
     debug_out @@ "parse_type_decl:" ^ s_expr res;
     res
@@ -840,7 +840,7 @@ and parse_id_def is_mutable p =
                                         params body)) pos
                 end
             end
-        | tk -> error (get_pos p) @@ "syntax error at " ^ s_token tk ^ " (id_def)"
+        | tk -> error (get_pos p) @@ "syntax error at '" ^ s_token tk ^ "' (id_def)"
     in
     debug_out @@ "parse_id_def:" ^ s_expr res;
     res
@@ -858,7 +858,7 @@ and parse_decl p =
         | TYPE -> parse_type_def p
         | EOF -> make_expr EEof (get_pos p)
         | Id _ -> parse_id_def false p
-        | tk -> error (get_pos p) @@ "syntax error at " ^ s_token tk ^ " (decl)"
+        | tk -> error (get_pos p) @@ "syntax error at '" ^ s_token tk ^ "' (decl)"
     in
     debug_out @@ "parse_decl:" ^ s_expr res;
     res

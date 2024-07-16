@@ -572,16 +572,22 @@ and parse_expr p =
 
 (*
 typexpr_primary
-    = INT | FLOAT | CHAR | UNIT | BOOL | STRING | TVAR | typeconstr
-TODO '(' で囲まれた型
+    = TVAR | typeconstr | '(' typexpr ')'
+
+//    = INT | FLOAT | CHAR | UNIT | BOOL | STRING | TVAR | typeconstr
 *)
 and parse_typexpr_primary p =
     debug_in @@ "parse_typexpr_primary";
     let res =
         match token p with
-        | Id id -> next_token p; EName id
         | TypId n -> next_token p; EVar n
-        | _ -> (*TODO*) error (get_pos p) "syntax error typexpr_primary"
+        | Id _ -> parse_typeconstr p
+        | LPAR ->
+            next_token p;
+            let e = parse_typexpr p in
+            expect p RPAR;
+            e
+        | tk -> error (get_pos p) @@ "syntax error at " ^ s_token tk ^ " (typexpr_primary)"
     in
     debug_out @@ "parse_typexpr_primary:" ^ s_typ_expr res;
     res

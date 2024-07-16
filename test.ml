@@ -216,9 +216,22 @@ let parser_test_data = [
     ("[ ]", "ENil");
     ("type c = char", "(ETypeDef ([], \"c\", (EAlias (EName \"char\"))))");
     ("type f = unit -> int", "(ETypeDef ([], \"f\", (EAlias (EFun ((EName \"unit\"), (EName \"int\"))))))");
-    ("type 'a x = 'a", "(ETypeDef ([0], \"x\", (EAlias (EVar 0))))");
     ("type t = int * char", "(ETypeDef ([], \"t\", (EAlias (ETuple [(EName \"int\");(EName \"char\")]))))");
+    ("type l = int list", "(ETypeDef ([], \"l\", (EAlias (EConstr ((EName \"int\"), (EName \"list\"))))))");
+    ("type ITree = int tree", "(ETypeDef ([], \"ITree\", (EAlias (EConstr ((EName \"int\"), (EName \"tree\"))))))");
     ("type c = (float)", "(ETypeDef ([], \"c\", (EAlias (EName \"float\"))))");
+    ("type 'a x = 'a", "(ETypeDef ([0], \"x\", (EAlias (EVar 0))))");
+    ("type 'a pair = 'a * 'a", "()");
+    ("type ('a, 'b) pair = 'a * 'b", "()");
+    ("type point2d = { mut x : int; mut y : int }", "");
+    ("type 'a point2d = { x : 'a; y : 'a }", "");
+    ("type point3d = {\n  mut x : float\n  mut y : float\n  mut z : float\n}", "");
+    ("type color = Red | Green | Blue", "");
+    ("type color = | Red | Green | Blue", "");
+    ("type color = Red | Green | Blue | RGB (int * int * int)", "");
+    ("type 'a option = None | Some 'a", "");
+    ("type 'a tree = Node 'a | Leaf ('a tree * 'a tree)", "");
+    ("type list = List.t", "");
 ]
 
 let parser_test () =

@@ -193,27 +193,32 @@ let parser_test_data = [
     ("1 <= 2", "(EBinary (BinLE, (EInt 1), (EInt 2)))");
     ("1 > 2", "(EBinary (BinGT, (EInt 1), (EInt 2)))");
     ("1 >= 2", "(EBinary (BinGE, (EInt 1), (EInt 2)))");
-    ("1 == 2", "");
-    ("1 != 2", "");
-    ("1 = 2", "");
-    ("1 <> 2", "");
-    ("1::2", "");
-    ("1::2::[3]", "");
-    ("1 + 2 - 3", "");
-    ("1 - 2 * 3", "");
-    ("1 - 2 / 3", "");
-    ("1 - 2 % 3", "");
-    ("foo ()", "");
-    ("foo 1", "");
-    ("bar 1 2", "");
-    ("-1", "");
-    ("!2", "");
-    ("'a'", "");
+    ("1 == 2", "(EBinary (BinEql, (EInt 1), (EInt 2)))");
+    ("1 != 2", "(EBinary (BinNeql, (EInt 1), (EInt 2)))");
+    ("1 = 2", "(EBinary (BinEq, (EInt 1), (EInt 2)))");
+    ("1 <> 2", "(EBinary (BinNeq, (EInt 1), (EInt 2)))");
+    ("1::2", "(EBinary (BinCons, (EInt 1), (EInt 2)))");
+    ("1::2::[3]", "(EBinary (BinCons, (EInt 1), (EBinary (BinCons, (EInt 2), (EBinary (BinCons, (EInt 3), ENil))))))");
+    ("1 + 2 - 3", "(EBinary (BinAdd, (EInt 1), (EBinary (BinSub, (EInt 2), (EInt 3)))))");
+    ("1 - 2 * 3", "(EBinary (BinSub, (EInt 1), (EBinary (BinMul, (EInt 2), (EInt 3)))))");
+    ("1 - 2 / 3", "(EBinary (BinSub, (EInt 1), (EBinary (BinDiv, (EInt 2), (EInt 3)))))");
+    ("1 - 2 % 3", "(EBinary (BinSub, (EInt 1), (EBinary (BinMod, (EInt 2), (EInt 3)))))");
+    ("foo ()", "(EApply ((EId \"foo\"), EUnit))");
+    ("foo 1", "(EApply ((EId \"foo\"), (EInt 1)))");
+    ("bar 1 2", "(EApply ((EApply ((EId \"bar\"), (EInt 1))), (EInt 2)))");
+    ("-1", "(EUnary (UMinus, (EInt 1)))");
+    ("!2", "(EUnary (UNot, (EInt 2)))");
+    ("'a'", "(EChar 'a')");
     ("\"abc\"", "(EString \"abc\")");
     ("[1,2,3]", "(EBinary (BinCons, (EInt 1), (EBinary (BinCons, (EInt 2), (EBinary (BinCons, (EInt 3), ENil))))))");
     ("[]", "ENil");
     ("()", "EUnit");
     ("[ ]", "ENil");
+    ("type c = char", "(ETypeDef ([], \"c\", (EAlias (EName \"char\"))))");
+    ("type f = unit -> int", "(ETypeDef ([], \"f\", (EAlias (EFun ((EName \"unit\"), (EName \"int\"))))))");
+    ("type 'a x = 'a", "(ETypeDef ([0], \"x\", (EAlias (EVar 0))))");
+    ("type t = int * char", "(ETypeDef ([], \"t\", (EAlias (ETuple [(EName \"int\");(EName \"char\")]))))");
+    ("type c = (float)", "(ETypeDef ([], \"c\", (EAlias (EName \"float\"))))");
 ]
 
 let parser_test () =
@@ -226,7 +231,7 @@ let parser_test () =
             if String.equal (s_expr_src e) expected then
                 test_ok()
             else
-                test_fail (s_expr_src e ^ " <> " ^ expected)
+                test_fail ("\n" ^ s_expr_src e ^ " <>\n" ^ expected)
         with
             | Error (pos, msg) -> test_fail @@ s_pos pos ^ "Error: " ^ msg
             | End_of_file -> test_fail "End_of_file"

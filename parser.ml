@@ -573,6 +573,7 @@ and parse_expr p =
 (*
 typexpr_primary
     = INT | FLOAT | CHAR | UNIT | BOOL | STRING | TVAR | typeconstr
+TODO '(' で囲まれた型
 *)
 and parse_typexpr_primary p =
     debug_in @@ "parse_typexpr_primary";

@@ -580,7 +580,7 @@ and parse_typexpr_primary p =
     debug_in @@ "parse_typexpr_primary";
     let res =
         match token p with
-        | TypId n -> next_token p; EVar n
+        | TypId n -> next_token p; TE_Var n
         | Id _ -> parse_typeconstr p
         | LPAR ->
             next_token p;
@@ -602,9 +602,19 @@ and parse_typeconstr p =
         match token p with
         | Id id ->
             next_token p;
-            EName id
-        (*TODO*)
-        | tk -> error (get_pos p) @@ "syntax error at '" ^ s_token tk ^ "' (type constructor)"
+            let e = TE_Name id in
+            let rec loop e =
+                if token p = DOT then begin
+                    next_token p;
+                    match token p with
+                    | Id id ->
+                        next_token p;
+                        loop (TE_Message (e, id))
+                    | tk -> error (get_pos p) @@ "syntax error at '" ^ s_token tk ^ "' (type name)"
+                end else e
+            in
+            loop e
+        | tk -> error (get_pos p) @@ "syntax error at '" ^ s_token tk ^ "' (type)"
     in
     debug_out @@ "parse_typeconstr:" ^ s_typ_expr res;
     res
@@ -620,7 +630,7 @@ and parse_typexpr_ctor p =
         match token p with
         | Id _ ->
             let rhs = parse_typeconstr p in
-            loop (EConstr (lhs, rhs))
+            loop (TE_Constr (lhs, rhs))
         | _ -> lhs
     in
     let res = loop lhs in
@@ -643,7 +653,7 @@ and parse_typexpr_tuple p =
     in
     let res =
         if token p = STAR then
-            ETuple (loop [te])
+            TE_Tuple (loop [te])
         else te
     in
     debug_out @@ "parse_typexpr_tuple:" ^ s_typ_expr res;
@@ -677,7 +687,7 @@ and parse_typexpr p =
             next_token p;
             skip_newline p;
             let tyr = parse_typexpr p in
-            EFun (tye, tyr)
+            TE_Fun (tye, tyr)
         | _ -> tye
     in
     debug_out @@ "parse_typexpr:" ^ s_typ_expr res;
@@ -722,7 +732,7 @@ and parse_type_decl p =
             skip_newline p;
             let pos = get_pos p in
             let tye = parse_type_representation p in
-            make_expr (ETypeDef ([], id, EAlias tye)) pos (*TODO*)
+            make_expr (ETypeDecl ([], id, TD_Alias tye)) pos (*TODO*)
         | tk -> error (get_pos p) @@ "syntax error at '" ^ s_token tk ^ "' (type_decl)"
     in
     debug_out @@ "parse_type_decl:" ^ s_expr res;

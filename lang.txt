@@ -40,10 +40,6 @@ typexpr_tuple
     = typexpr_ctor {'*' typexpr_ctor}
 typexpr_ctor
     = ( '(' typexpr {',' typexpr} ')' | typexpr_primary ) {typeconstr}
-/*
-typexpr_primary
-    = INT | FLOAT | CHAR | UNIT | BOOL | STRING | TVAR | typeconstr | '(' typexpr ')'
-*/
 typexpr_primary
     = TVAR | typeconstr | '(' typexpr ')'
 typeconstr

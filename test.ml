@@ -66,22 +66,23 @@ let rec s_expr_src = function
     | (EMessage (lhs, s), _) -> "(EMessage (" ^ s_expr_src lhs ^ ", \"" ^ s ^ "\"))"
     | (EBlock el, _) -> "(EBlock [" ^ s_list s_expr "; " el ^ "])"
     | (ESeq el, _) -> "(ESeq [" ^ s_list s_expr ";\n" el ^ "])"
-    | (ETypeDef (fs, id, tyd), _) ->
-        "(ETypeDef ([" ^ s_list string_of_int ";" fs ^ "], \"" ^ id ^ "\", " ^ s_typ_decl_src tyd ^ "))"
+    | (ETypeDecl (fs, id, tyd), _) ->
+        "(ETypeDecl ([" ^ s_list string_of_int ";" fs ^ "], \"" ^ id ^ "\", " ^ s_typ_decl_src tyd ^ "))"
     | (EDecl (id, tye), _) ->
         "(EDecl (\"" ^ id ^ "\", " ^ s_typ_expr_src tye ^ "))"
 
 and s_typ_expr_src = function
-    | EName id -> "(EName \"" ^ id ^ "\")"
-    | EVar n -> "(EVar " ^ int_to_alpha n ^ ")"
-    | ETuple tl -> "(ETuple [" ^ s_list s_typ_expr_src ";" tl ^ "])"
-    | EFun (t1, t2) -> "(EFun (" ^ s_typ_expr_src t1 ^ ", " ^ s_typ_expr_src t2 ^ "))"
-    | EConstr (t1, t2) -> "(EConstr (" ^ s_typ_expr_src t1 ^ ", " ^ s_typ_expr_src t2 ^ "))"
+    | TE_Name id -> "(TE_Name \"" ^ id ^ "\")"
+    | TE_Message (e, id) -> "(TE_Message (" ^ s_typ_expr_src e ^ ", \"" ^ id ^ "\"))"
+    | TE_Var n -> "(TE_Var " ^ int_to_alpha n ^ ")"
+    | TE_Tuple tl -> "(TE_Tuple [" ^ s_list s_typ_expr_src ";" tl ^ "])"
+    | TE_Fun (t1, t2) -> "(TE_Fun (" ^ s_typ_expr_src t1 ^ ", " ^ s_typ_expr_src t2 ^ "))"
+    | TE_Constr (t1, t2) -> "(TE_Constr (" ^ s_typ_expr_src t1 ^ ", " ^ s_typ_expr_src t2 ^ "))"
 
 and s_typ_decl_src = function
-    | EAlias tye -> "(EAlias " ^ s_typ_expr_src tye ^ ")"
-    | ERecord rl -> "(ERecord [" ^ s_list s_typ_record_src ";" rl ^ "])"
-    | EVariant vl -> "(EVariant [" ^ s_list s_typ_variant_src ";" vl ^ "])"
+    | TD_Alias tye -> "(TD_Alias " ^ s_typ_expr_src tye ^ ")"
+    | TD_Record rl -> "(TD_Record [" ^ s_list s_typ_record_src ";" rl ^ "])"
+    | TD_Variant vl -> "(TD_Variant [" ^ s_list s_typ_variant_src ";" vl ^ "])"
 
 and s_typ_record_src = function
     | (id, b, te) ->
@@ -214,13 +215,13 @@ let parser_test_data = [
     ("[]", "ENil");
     ("()", "EUnit");
     ("[ ]", "ENil");
-    ("type c = char", "(ETypeDef ([], \"c\", (EAlias (EName \"char\"))))");
-    ("type f = unit -> int", "(ETypeDef ([], \"f\", (EAlias (EFun ((EName \"unit\"), (EName \"int\"))))))");
-    ("type t = (int * char)", "(ETypeDef ([], \"t\", (EAlias (ETuple [(EName \"int\");(EName \"char\")]))))");
-    ("type l = int list", "(ETypeDef ([], \"l\", (EAlias (EConstr ((EName \"int\"), (EName \"list\"))))))");
-    ("type ITree = int tree", "(ETypeDef ([], \"ITree\", (EAlias (EConstr ((EName \"int\"), (EName \"tree\"))))))");
-    ("type c = (float)", "(ETypeDef ([], \"c\", (EAlias (EName \"float\"))))");
-    ("type 'a x = 'a", "(ETypeDef ([0], \"x\", (EAlias (EVar 0))))");
+    ("type c = char", "(ETypeDecl ([], \"c\", (TD_Alias (TE_Name \"char\"))))");
+    ("type f = unit -> int", "(ETypeDecl ([], \"f\", (TD_Alias (TE_Fun ((TE_Name \"unit\"), (TE_Name \"int\"))))))");
+    ("type t = (int * char)", "(ETypeDecl ([], \"t\", (TD_Alias (TE_Tuple [(TE_Name \"int\");(TE_Name \"char\")]))))");
+    ("type l = int list", "(ETypeDecl ([], \"l\", (TD_Alias (TE_Constr ((TE_Name \"int\"), (TE_Name \"list\"))))))");
+    ("type ITree = int tree", "(ETypeDecl ([], \"ITree\", (TD_Alias (TE_Constr ((TE_Name \"int\"), (TE_Name \"tree\"))))))");
+    ("type c = (float)", "(ETypeDecl ([], \"c\", (TD_Alias (TE_Name \"float\"))))");
+    ("type 'a x = 'a", "(ETypeDecl ([0], \"x\", (TD_Alias (EVar 0))))");
     ("type 'a pair = 'a * 'a", "()");
     ("type ('a, 'b) pair = 'a * 'b", "()");
     ("type point2d = { mut x : int; mut y : int }", "");
@@ -231,7 +232,7 @@ let parser_test_data = [
     ("type color = Red | Green | Blue | RGB (int * int * int)", "");
     ("type 'a option = None | Some 'a", "");
     ("type 'a tree = Node 'a | Leaf ('a tree * 'a tree)", "");
-    ("type list = List.t", "");
+    ("type list = List.t", "(ETypeDecl ([], \"list\", (TD_Alias (TE_Message ((TE_Name \"List\"), \"t\")))))");
 ]
 
 let parser_test () =

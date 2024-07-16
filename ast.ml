@@ -95,20 +95,21 @@ type expr_decl =
     | EMessage of expr * string
     | EBlock of expr list
     | ESeq of expr list
-    | ETypeDef of int list * string * typ_decl
+    | ETypeDecl of int list * string * typ_decl
     | EDecl of string * typ_expr
 and expr = expr_decl * pos
 
 and typ_expr =
-    | EName of string
-    | EVar of int
-    | ETuple of typ_expr list
-    | EFun of typ_expr * typ_expr
-    | EConstr of typ_expr * typ_expr
+    | TE_Name of string
+    | TE_Message of typ_expr * string
+    | TE_Var of int
+    | TE_Tuple of typ_expr list
+    | TE_Fun of typ_expr * typ_expr
+    | TE_Constr of typ_expr * typ_expr
 and typ_decl =
-    | EAlias of typ_expr
-    | ERecord of (string * bool * typ_expr) list
-    | EVariant of (string * typ_expr option) list
+    | TD_Alias of typ_expr
+    | TD_Record of (string * bool * typ_expr) list
+    | TD_Variant of (string * typ_expr option) list
 
 and value =
     | VUnit | VNil | VInt of int | VFloat of float
@@ -234,21 +235,22 @@ let rec s_expr = function
     | (EMessage (lhs, s), _) -> s_expr lhs ^ "." ^ s
     | (EBlock el, _) -> "{ " ^ s_list s_expr "; " el ^ " }"
     | (ESeq el, _) -> s_list s_expr "\n" el
-    | (ETypeDef (fs, id, tyd), _) -> "type " ^ id ^ " = " ^ s_typ_decl tyd
+    | (ETypeDecl (fs, id, tyd), _) -> "type " ^ id ^ " = " ^ s_typ_decl tyd
     | (EDecl (id, tye), _) -> id ^ " : " ^ s_typ_expr tye ^ "\n"
 
 and s_typ_expr tye =
     let rec to_s n tye =
         let (m, str) =
             match tye with
-            | EName id -> (5, id)
-            | EVar n -> (5, "'" ^ int_to_alpha n) (*TODO*)
-            | ETuple tl -> (3, "(" ^ s_list s_typ_expr " * " tl ^ ")")
-            | EFun (t1, t2) ->
+            | TE_Name id -> (5, id)
+            | TE_Message (e, id) -> (5, to_s 1 e ^ "." ^ id)
+            | TE_Var n -> (5, "'" ^ int_to_alpha n)
+            | TE_Tuple tl -> (3, "(" ^ s_list s_typ_expr " * " tl ^ ")")
+            | TE_Fun (t1, t2) ->
                 let s1 = to_s 1 t1 in
                 let s2 = to_s 0 t2 in
                 (1, s1 ^ " -> " ^ s2)
-            | EConstr (t1, t2) ->
+            | TE_Constr (t1, t2) ->
                 let s1 = to_s 1 t1 in
                 let s2 = to_s 0 t2 in
                 (1, s1 ^ " " ^ s2)
@@ -258,9 +260,9 @@ and s_typ_expr tye =
     in to_s (-1) tye
 
 and s_typ_decl = function
-    | EAlias tye -> s_typ_expr tye
-    | ERecord _ -> "record" (**)
-    | EVariant _ -> "variant" (**)
+    | TD_Alias tye -> s_typ_expr tye
+    | TD_Record _ -> "record" (**)
+    | TD_Variant _ -> "variant" (**)
 
 let rec s_value = function
     | VUnit -> "()"

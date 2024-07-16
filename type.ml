@@ -251,23 +251,24 @@ let infer_binary op tl tr pos =
 
 
 let rec typ_from_expr = function
-    | EName "unit" -> TUnit
-    | EName "int" -> TInt
-    | EName "float" -> TFloat
-    | EName "bool" -> TBool
-    | EName "char" -> TChar
-    | EName "string" -> TString
-    | EName id -> failwith "EName TODO"
-    | EVar n -> TVar (n, {contents=None})
-    | ETuple el -> TTuple (List.map typ_from_expr el)
-    | EFun (e1, e2) -> TFun (typ_from_expr e1, typ_from_expr e2)
-    | EConstr (e1, EName "list") -> TList (typ_from_expr e1)
-    | EConstr (e1, e2) -> failwith "EConstr TODO"
+    | TE_Name "unit" -> TUnit
+    | TE_Name "int" -> TInt
+    | TE_Name "float" -> TFloat
+    | TE_Name "bool" -> TBool
+    | TE_Name "char" -> TChar
+    | TE_Name "string" -> TString
+    | TE_Name id -> failwith "TE_Name TODO"
+    | TE_Message (e, id) -> failwith "TE_Message TODO"
+    | TE_Var n -> TVar (n, {contents=None})
+    | TE_Tuple el -> TTuple (List.map typ_from_expr el)
+    | TE_Fun (e1, e2) -> TFun (typ_from_expr e1, typ_from_expr e2)
+    | TE_Constr (e1, TE_Name "list") -> TList (typ_from_expr e1)
+    | TE_Constr (e1, e2) -> failwith "TE_Constr TODO"
 
 let rec typ_from_decl = function
-    | EAlias e -> typ_from_expr e
-    | ERecord _
-    | EVariant _ -> failwith "EVariant TODO"
+    | TD_Alias e -> typ_from_expr e
+    | TD_Record _
+    | TD_Variant _ -> failwith "TD_Variant TODO"
 
 let rec infer e = 
     debug_in "infer";
@@ -434,7 +435,7 @@ let rec infer e =
             debug_print @@ "infer import " ^ mid;
             load_module mid aid;
             TUnit
-        | (ETypeDef (tvs, id, tyd), _) ->
+        | (ETypeDecl (tvs, id, tyd), _) ->
             debug_print @@ "type def " ^ id ^ " = " ^ s_typ_decl tyd;
             let ty = typ_from_decl tyd in
             let tys = generalize ty in

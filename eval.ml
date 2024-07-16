@@ -306,8 +306,8 @@ let rec eval e =
         | (EImport (mid, aid), pos) ->
             debug_print @@ "eval import " ^ mid;
             VUnit
-        | (ETypeDef (tvs, id, tyd), _) ->
-            debug_print @@ "type def " ^ id ^ " = " ^ s_typ_decl tyd;
+        | (ETypeDecl (tvs, id, tyd), _) ->
+            debug_print @@ "type decl " ^ id ^ " = " ^ s_typ_decl tyd;
             (*TODO*)
             VUnit
         | (EDecl (id, tye), _) ->

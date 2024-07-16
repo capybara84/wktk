@@ -250,23 +250,32 @@ let infer_binary op tl tr pos =
         tr
 
 
-let rec typ_from_expr = function
+let rec typ_from_expr pos = function
     | TE_Name "unit" -> TUnit
     | TE_Name "int" -> TInt
     | TE_Name "float" -> TFloat
     | TE_Name "bool" -> TBool
     | TE_Name "char" -> TChar
     | TE_Name "string" -> TString
-    | TE_Name id -> failwith "TE_Name TODO"
+    | TE_Name id ->
+        let tysym =
+            try
+                Symbol.lookup_tysym id
+            with Not_found ->
+                (try
+                    Symbol.lookup_tysym_default id
+                with Not_found -> error pos @@ "'" ^ id ^ "' not found")
+        in
+        tysym.tys.body
     | TE_Message (e, id) -> failwith "TE_Message TODO"
     | TE_Var n -> TVar (n, {contents=None})
-    | TE_Tuple el -> TTuple (List.map typ_from_expr el)
-    | TE_Fun (e1, e2) -> TFun (typ_from_expr e1, typ_from_expr e2)
-    | TE_Constr (e1, TE_Name "list") -> TList (typ_from_expr e1)
+    | TE_Tuple el -> TTuple (List.map (typ_from_expr pos) el)
+    | TE_Fun (e1, e2) -> TFun (typ_from_expr pos e1, typ_from_expr pos e2)
+    | TE_Constr (e1, TE_Name "list") -> TList (typ_from_expr pos e1)
     | TE_Constr (e1, e2) -> failwith "TE_Constr TODO"
 
-let rec typ_from_decl = function
-    | TD_Alias e -> typ_from_expr e
+let rec typ_from_decl pos = function
+    | TD_Alias e -> typ_from_expr pos e
     | TD_Record _
     | TD_Variant _ -> failwith "TD_Variant TODO"
 
@@ -435,16 +444,16 @@ let rec infer e =
             debug_print @@ "infer import " ^ mid;
             load_module mid aid;
             TUnit
-        | (ETypeDecl (tvs, id, tyd), _) ->
-            debug_print @@ "type def " ^ id ^ " = " ^ s_typ_decl tyd;
-            let ty = typ_from_decl tyd in
+        | (ETypeDecl (tvs, id, tyd), pos) ->
+            debug_print @@ "type decl " ^ id ^ " = " ^ s_typ_decl tyd;
+            let ty = typ_from_decl pos tyd in
             let tys = generalize ty in
             let tysym = { tys = tys; is_mutable = false } in
             Symbol.insert_tysym id tysym;
             TUnit
         | (EDecl (id, tye), pos) ->
             debug_print @@ "decl " ^ id ^ " = " ^ s_typ_expr tye;
-            let ty = typ_from_expr tye in
+            let ty = typ_from_expr pos tye in
             (try
                 let tysym = Symbol.lookup_tysym id in
                 if not (decl_equal tysym.tys.body ty) then

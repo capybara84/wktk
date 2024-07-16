@@ -4,12 +4,16 @@
     ID で検索して型を割り当てる、みたいな前処理が必要なので。
     parse後、infer時かなんかに。
 あちこちにあるtysym={tys=...;is_mutable=}を関数かなにかにしたい
-type
-    named 途中
 
-    decl
+*type decl いちおうできた。type_ctor の(te,te) id形式がまだなのと、
+    前方参照ができないのをなんとかしたい。
+    そもそもtype_ctorの(te,te) id形式ってどういう時に使うんだっけ。。
+
+*関数の型宣言
+    いちおうできた
 
 record
+
 mutable の扱いを今はis_mutableにしているが、record { mutable contents } にしたい
 assignの型チェック
 

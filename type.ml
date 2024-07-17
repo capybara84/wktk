@@ -280,7 +280,7 @@ let rec typ_from_expr pos = function
                 with Not_found -> error pos @@ "'" ^ id ^ "' not found")
         in
         tysym.tys.body
-    | TE_Message (e, id) -> failwith "TE_Message TODO"
+    | TE_Message (e, id) -> (*TODO*) failwith "TE_Message TODO"
     | TE_Var n -> TVar (n, {contents=None})
     | TE_Tuple el -> TTuple (List.map (typ_from_expr pos) el)
     | TE_Fun (e1, e2) -> TFun (typ_from_expr pos e1, typ_from_expr pos e2)
@@ -292,8 +292,8 @@ let rec typ_from_expr pos = function
 
 let rec typ_from_decl pos = function
     | TD_Alias e -> typ_from_expr pos e
-    | TD_Record _ -> failwith "TD_Record TODO"
-    | TD_Variant _ -> failwith "TD_Variant TODO"
+    | TD_Record _ -> (*TODO*) failwith "TD_Record TODO"
+    | TD_Variant _ -> (*TODO*) failwith "TD_Variant TODO"
 
 let rec infer e = 
     debug_in "infer";
@@ -461,14 +461,14 @@ let rec infer e =
             load_module mid aid;
             TUnit
         | (ETypeDecl (tvs, id, tyd), pos) ->
-            debug_print @@ "type decl " ^ id ^ " = " ^ s_typ_decl tyd;
+            debug_print @@ "type decl [" ^ s_list string_of_int "," tvs ^ "] " ^ id ^ " = " ^ s_typ_decl tyd;
             let ty = typ_from_decl pos tyd in
             let tys = generalize ty in
             let tysym = { tys = tys; is_mutable = false } in
             Symbol.insert_tysym id tysym;
             TUnit
         | (EDecl (id, tye), pos) ->
-            debug_print @@ "decl " ^ id ^ " = " ^ s_typ_expr tye;
+            debug_print @@ "decl " ^ id ^ " : " ^ s_typ_expr tye;
             let ty = typ_from_expr pos tye in
             (try
                 let tysym = Symbol.lookup_tysym id in

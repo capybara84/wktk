@@ -240,7 +240,7 @@ let rec s_expr = function
     | (EMessage (lhs, s), _) -> s_expr lhs ^ "." ^ s
     | (EBlock el, _) -> "{ " ^ s_list s_expr "; " el ^ " }"
     | (ESeq el, _) -> s_list s_expr "\n" el
-    | (ETypeDecl (fs, id, tyd), _) -> "type " ^ id ^ " = " ^ s_typ_decl tyd
+    | (ETypeDecl (fs, id, tyd), _) -> "type " ^ s_list (fun x -> "'" ^ int_to_alpha x) "," fs ^ " " ^ id ^ " = " ^ s_typ_decl tyd
     | (EDecl (id, tye), _) -> id ^ " : " ^ s_typ_expr tye ^ "\n"
 
 and s_typ_expr tye =
@@ -266,8 +266,8 @@ and s_typ_expr tye =
 
 and s_typ_decl = function
     | TD_Alias tye -> s_typ_expr tye
-    | TD_Record _ -> "record" (**)
-    | TD_Variant _ -> "variant" (**)
+    | TD_Record _ -> "record" (*TODO*)
+    | TD_Variant _ -> "variant" (*TODO*)
 
 let rec s_value = function
     | VUnit -> "()"

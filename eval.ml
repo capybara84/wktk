@@ -307,12 +307,11 @@ let rec eval e =
             debug_print @@ "eval import " ^ mid;
             VUnit
         | (ETypeDecl (tvs, id, tyd), _) ->
-            debug_print @@ "type decl " ^ id ^ " = " ^ s_typ_decl tyd;
+            debug_print @@ "type decl [" ^ s_list string_of_int "," tvs ^ "] " ^ id ^ " = " ^ s_typ_decl tyd;
             (*TODO*)
             VUnit
         | (EDecl (id, tye), _) ->
-            debug_print @@ "decl " ^ id ^ " = " ^ s_typ_expr tye;
-            (*TODO*)
+            debug_print @@ "decl " ^ id ^ " : " ^ s_typ_expr tye;
             VUnit
     in
     debug_out @@ "eval > " ^ s_value res;

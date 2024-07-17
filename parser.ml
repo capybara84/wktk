@@ -619,6 +619,7 @@ and parse_typname p =
 typexpr_primary
     = TVAR | typname | '(' typexpr ')'
 *)
+(*
 and parse_typexpr_primary p =
     debug_in @@ "parse_typexpr_primary";
     let res =
@@ -634,17 +635,21 @@ and parse_typexpr_primary p =
     in
     debug_out @@ "parse_typexpr_primary:" ^ s_typ_expr res;
     res
+*)
 
 (*
-typexpr_ctor
-    = typexpr_primary {typname}
-typexpr_primary
-    = TVAR | typname | '(' typexpr ')'
---
 typexpr_ctor
     = '(' typexpr {',' typexpr} ')' {typname}
     | TVAR {typname}
     | typname {typname}
+
+---
+
+typexpr_ctor
+    = typexpr_primary {typname}
+    | '(' typexpr {',' typexpr} ')' {typname}
+typexpr_primary
+    = TVAR | typname | '(' typexpr ')'
 *)
 and parse_typexpr_ctor p =
     debug_in @@ "parse_typexpr_ctor";
@@ -670,8 +675,9 @@ and parse_typexpr_ctor p =
             in
             expect p RPAR;
             res
-        | _ ->
-            parse_typexpr_primary p
+        | TypId n -> next_token p; TE_Var n
+        | Id _ -> parse_typname p
+        | tk -> error (get_pos p) @@ "syntax error at '" ^ s_token tk ^ "' (typexpr_ctor)"
     in
     let rec loop lhs =
         match token p with

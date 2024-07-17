@@ -1,3 +1,11 @@
+現時点で、
+type 'a ll = 'a list -> int
+length : 'a ll
+length x = if x = [] then 0 else 1 + length (List.tl x)
+が型エラーになる
+
+typ_expr と typ_decl をinferする時に、typ に変換して、
+以降はtypで扱う、ってのがいいかなと思う。
 
 *type ETypeDefとかEDecl の引数をtyp_symにしているが、typ_schemeかtypでいいのでは？
     -> typ_expr と typ_decl にした。
@@ -8,6 +16,9 @@
 *type decl いちおうできた。type_ctor の(te,te) id形式がまだなのと、
     前方参照ができないのをなんとかしたい。
     そもそもtype_ctorの(te,te) id形式ってどういう時に使うんだっけ。。
+*   type ('a,'b) pair = ('a * 'b) のときの (string,int) pair ってやつだった。
+    ので対応した。
+    前方参照はなんか考える（常に前方参照できる、がいいな）
 
 *関数の型宣言
     いちおうできた

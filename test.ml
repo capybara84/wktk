@@ -251,6 +251,7 @@ let parser_test_data = [
         "(ETypeDecl ([0], \"point2d\", (TD_Record [(\"x\", false, (TE_Var 0));(\"y\", false, (TE_Var 0))])))");
     ("type point3d = {\n  mut x : float\n  mut y : float\n  mut z : float\n}",
         "(ETypeDecl ([], \"point3d\", (TD_Record [(\"x\", true, (TE_Name \"float\"));(\"y\", true, (TE_Name \"float\"));(\"z\", true, (TE_Name \"float\"))])))");
+    ("type 'a ll = 'a list", "(ETypeDecl ([0], \"ll\", (TD_Alias (TE_Constr ((TE_Var 0), (TE_Name \"list\"))))))");
 ]
 
 let parser_test () =
@@ -259,6 +260,7 @@ let parser_test () =
         try
             verbose @@ "parse: " ^ txt;
             let e = Parser.parse_text true txt in
+            verbose @@ "result: " ^ s_expr e;
             verbose @@ "result: " ^ s_expr_src e;
             if String.equal (s_expr_src e) expected then
                 test_ok()

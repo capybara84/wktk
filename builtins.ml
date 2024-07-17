@@ -107,6 +107,12 @@ let insert mid id ty v =
 let init () =
     insert "" "true" TBool (VBool true);
     insert "" "false" TBool (VBool false);
+    insert "" "unit" TUnit (VType TUnit);
+    insert "" "int" TInt (VType TInt);
+    insert "" "float" TFloat (VType TFloat);
+    insert "" "bool" TBool (VType TBool);
+    insert "" "char" TChar (VType TChar);
+    insert "" "string" TString (VType TString);
     List.iter (fun (mid, id, ty, fn) ->
         insert mid id ty (VBuiltin fn)) func_list
 

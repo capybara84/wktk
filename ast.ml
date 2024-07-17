@@ -35,7 +35,7 @@ type token_decl =
     | EOF | NEWLINE | INDENT | DEDENT
     | Int of int | Float of float | Char of char
     | String of string | Id of string | TypId of int
-    | MODULE | IMPORT | AS | TYPE | LET | IN | MUT | FN
+    | MODULE | IMPORT | AS | DECL | TYPE | LET | IN | MUT | FN
     | IF | THEN | ELSE | BEGIN | END | SEMI | COLON | DCOLON
     | DOT | COMMA | ARROW | ASSIGN | OR | AND | LOR | LAND | LPAR
     | RPAR | LBRA | RBRA | NOT | EQ | NEQ | EQL | NEQL
@@ -46,6 +46,7 @@ and token = token_decl * pos
 type typ =
     | TUnit | TInt | TFloat | TBool | TChar | TString
     | TModule of string
+    | TAlias of string * typ
     | TConstr of typ * typ
     | TList of typ
     | TTuple of typ list
@@ -116,6 +117,7 @@ and value =
     | VUnit | VNil | VInt of int | VFloat of float
     | VBool of bool | VChar of char | VString of string
     | VModule of module_def
+    | VType of typ
     | VCons of value * value
     | VTuple of value list
     | VClosure of expr * expr * env
@@ -156,6 +158,7 @@ let s_token = function
     | Id s -> s
     | TypId n -> "'" ^ int_to_alpha n
     | MODULE -> "module" | IMPORT -> "import" | AS -> "as"
+    | DECL -> "decl"
     | TYPE -> "type" | LET -> "let" | IN -> "in"|  MUT -> "mut"
     | FN -> "fn" | IF -> "if" | THEN -> "then" | ELSE -> "else"
     | BEGIN -> "{" | END -> "}" | SEMI -> ";" | COLON -> ":"
@@ -176,6 +179,7 @@ let rec s_typ ty =
             | TUnit -> (5, "unit") | TInt -> (5, "int") | TFloat -> (5, "float")
             | TBool -> (5, "bool") | TChar -> (5, "char") | TString -> (5, "string")
             | TModule s -> (5, s)
+            | TAlias (s, _) -> (5, s)
             | TConstr (t1, t2) ->
                 let s1 = to_s 1 t1 in
                 let s2 = to_s 0 t2 in
@@ -230,18 +234,18 @@ let rec s_expr = function
         "(" ^ s_expr lhs ^ " " ^ s_binop op ^ " " ^ s_expr rhs ^ ")"
     | (EApply (f, a), _) -> s_expr f ^ " " ^ s_expr a
     | (ELet (ll, e), _)
-        -> "let" ^ s_list s_expr "; " ll ^ " in " ^ s_expr e ^ "\n"
-    | (EValDef (b, id, e), _) -> " " ^ (if b then "mut " else "") ^ id ^ " = " ^ s_expr e ^ "\n"
-    | (EFuncDef (id, e), _) -> " fun " ^ id ^ " = " ^ s_expr e ^ "\n"
+        -> "let" ^ s_list s_expr "; " ll ^ " in " ^ s_expr e
+    | (EValDef (b, id, e), _) -> " " ^ (if b then "mut " else "") ^ id ^ " = " ^ s_expr e
+    | (EFuncDef (id, e), _) -> " fun " ^ id ^ " = " ^ s_expr e
     | (ELambda (a, b), _) -> "(fn " ^ s_expr a ^ " -> (" ^ s_expr b ^ "))"
     | (ECond (c, t, e), _) ->
         "(if " ^ s_expr c ^ " then " ^ s_expr t ^ " else " ^ s_expr e ^ ")"
     | (EAssign (lhs, rhs), _) -> s_expr lhs ^ " <- " ^ s_expr rhs
     | (EMessage (lhs, s), _) -> s_expr lhs ^ "." ^ s
     | (EBlock el, _) -> "{ " ^ s_list s_expr "; " el ^ " }"
-    | (ESeq el, _) -> s_list s_expr "\n" el
+    | (ESeq el, _) -> s_list s_expr "" el
     | (ETypeDecl (fs, id, tyd), _) -> "type " ^ s_list (fun x -> "'" ^ int_to_alpha x) "," fs ^ " " ^ id ^ " = " ^ s_typ_decl tyd
-    | (EDecl (id, tye), _) -> id ^ " : " ^ s_typ_expr tye ^ "\n"
+    | (EDecl (id, tye), _) -> id ^ " : " ^ s_typ_expr tye ^ ""
 
 and s_typ_expr tye =
     let rec to_s n tye =
@@ -279,6 +283,7 @@ let rec s_value = function
     | VChar c -> String.make 1 c
     | VString s -> s
     | VModule _ -> "<module>"
+    | VType ty -> "<type " ^ s_typ ty ^ ">"
     | (VCons (_,_)) as v -> "[" ^ (cons_to_string v) ^ "]"
     | VTuple vl -> "(" ^ s_list s_value ", " vl ^ ")"
     | VClosure _ -> "<closure>"

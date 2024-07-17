@@ -22,6 +22,40 @@ let debug_out s =
         (decr debug_indent; debug_print @@ "OUT " ^ s)
 
 
+let rec typ_from_expr pos = function
+    | TE_Name "unit" -> TUnit
+    | TE_Name "int" -> TInt
+    | TE_Name "float" -> TFloat
+    | TE_Name "bool" -> TBool
+    | TE_Name "char" -> TChar
+    | TE_Name "string" -> TString
+    | TE_Name id ->
+        let tysym =
+            try
+                Symbol.lookup_tysym id
+            with Not_found ->
+                (try
+                    Symbol.lookup_tysym_default id
+                with Not_found -> error pos @@ "'" ^ id ^ "' not found")
+        in
+        tysym.tys.body
+    | TE_Message (e, id) -> (*TODO*) failwith "TE_Message TODO"
+    | TE_Var n -> TVar (n, {contents=None})
+    | TE_Tuple el -> TTuple (List.map (typ_from_expr pos) el)
+    | TE_Fun (e1, e2) -> TFun (typ_from_expr pos e1, typ_from_expr pos e2)
+    | TE_Constr (e1, TE_Name "list") -> TList (typ_from_expr pos e1)
+    | TE_Constr (e1, e2) ->
+        let t1 = typ_from_expr pos e1 in
+        let t2 = typ_from_expr pos e2 in
+        TConstr (t1, t2)
+
+let rec typ_from_decl pos = function
+    | TD_Alias e -> typ_from_expr pos e
+    | TD_Record _ -> (*TODO*) failwith "TD_Record TODO"
+    | TD_Variant _ -> (*TODO*) failwith "TD_Variant TODO"
+
+
+
 let rec cons_append x y =
     match x with
     | VNil -> y
@@ -306,9 +340,11 @@ let rec eval e =
         | (EImport (mid, aid), pos) ->
             debug_print @@ "eval import " ^ mid;
             VUnit
-        | (ETypeDecl (tvs, id, tyd), _) ->
+        | (ETypeDecl (tvs, id, tyd), pos) ->
             debug_print @@ "type decl [" ^ s_list string_of_int "," tvs ^ "] " ^ id ^ " = " ^ s_typ_decl tyd;
-            (*TODO*)
+            let ty = typ_from_decl pos tyd in
+            let sym = { v = VType ty; is_mutable = false } in
+            Symbol.insert_sym id sym;
             VUnit
         | (EDecl (id, tye), _) ->
             debug_print @@ "decl " ^ id ^ " : " ^ s_typ_expr tye;

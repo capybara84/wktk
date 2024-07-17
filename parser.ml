@@ -908,6 +908,25 @@ and parse_type_def p =
     res
 
 (*
+decl_def
+    = DECL ID ':' typexpr
+*)
+and parse_decl_def p =
+    debug_in "parse_decl_def";
+    next_token p;
+    let res = match token p with
+        | Id id ->
+            let pos = get_pos p in
+            next_token p;
+            expect p COLON;
+            let tye = parse_typexpr p in
+            make_expr (EDecl (id, tye)) pos
+        | tk -> error (get_pos p) @@ "syntax error at '" ^ s_token tk ^ "' (decl_def)"
+    in
+    debug_out @@ "parse_decl_def:" ^ s_expr res;
+    res
+
+(*
 import
     = IMPORT ID [AS ID]
 *)
@@ -1057,7 +1076,7 @@ let parse_program p =
 
 (*
 topdecl
-    = module | import | type_def | expr
+    = module | import | type_def | decl_def | expr
 *)
 let parse_topdecl p =
     debug_in "parse_topdecl";
@@ -1065,6 +1084,7 @@ let parse_topdecl p =
         | MODULE -> parse_module p
         | IMPORT -> parse_import p
         | TYPE -> parse_type_def p
+        | DECL -> parse_decl_def p
         | EOF -> make_expr EEof (get_pos p)
         | _ -> parse_expr p
     in

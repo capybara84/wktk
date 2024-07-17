@@ -28,6 +28,7 @@ let rec s_typ_raw ty =
             | TUnit -> (5, "unit") | TInt -> (5, "int") | TFloat -> (5, "float")
             | TBool -> (5, "bool") | TChar -> (5, "char") | TString -> (5, "string")
             | TModule s -> (5, s)
+            | TAlias (s, _) -> (5, s)
             | TConstr (t1, t2) ->
                 let s1 = to_s 1 t1 in
                 let s2 = to_s 0 t2 in
@@ -53,6 +54,7 @@ let get_pos x = (snd x)
 let rec equal t1 t2 =
     match (t1, t2) with
     | (a, b) when a == b -> true
+    | (TAlias (s1,_), TAlias (s2,_)) -> s1 = s2
     | (TConstr (t11, t12), TConstr (t21, t22)) -> equal t11 t21 && equal t12 t22
     | (TList TChar, TString) | (TString, TList TChar) -> true
     | (TList t1, TList t2) -> equal t1 t2
@@ -82,6 +84,7 @@ let reloc_tvar t =
     let rec conv t =
         match t with
         | TUnit | TInt | TFloat | TBool | TChar | TString | TModule _ -> t
+        | TAlias (s, t) -> TAlias (s, conv t)
         | TConstr (t1, t2) -> TConstr (conv t1, conv t2)
         | TList t -> TList (conv t)
         | TTuple tl -> TTuple (List.map conv tl)
@@ -105,6 +108,7 @@ let decl_equal t1 t2 =
 
 let rec is_type t1 t2 =
     match (t1, t2) with
+    | (TAlias (s1,_), TAlias (s2,_)) -> s1 = s2
     | (TVar (_, {contents=Some t1'}), _) -> is_type t1' t2
     | (_, TVar (_, {contents=Some t2'})) -> is_type t1 t2'
     | (TConstr (t11,t12), TConstr (t21,t22)) -> is_type t11 t21 && is_type t12 t22
@@ -124,11 +128,15 @@ and list_is_type = function
 
 let is_type_in t tl = List.exists (fun t2 -> is_type t t2) tl
 
-let is_list = function | TList _ -> true | _ -> false
+let rec is_list = function
+    | TList _ -> true
+    | TAlias (_, t) -> is_list t
+    | TVar (_, {contents=Some t}) -> is_list t
+    | _ -> false
 
-let is_tvar t =
-    match t with
+let rec is_tvar = function
     | TVar _ -> true
+    | TAlias (_, t) -> is_tvar t
     | _ -> false
 
 let rec type_var_equal t1 t2 =
@@ -191,11 +199,13 @@ let rec unify t1 t2 pos =
             r2 := Some t1;
             debug_print @@ "... " ^ s_typ_raw t2
         end
+    | (TAlias (s1,_), TAlias (s2,_)) when s1=s2 -> ()
     | (_, _) -> error pos @@ "type mismatch between " ^ s_typ t2 ^ " and " ^ s_typ t1);
     debug_out @@ "unify"
 
 
 let rec free_tyvars = function
+    | TAlias (_,t) -> free_tyvars t
     | TList t -> free_tyvars t
     | TTuple tl -> List.fold_left (fun fvs x -> fvs @ free_tyvars x) [] tl
     | TConstr (t1, t2) -> free_tyvars t1 @ free_tyvars t2
@@ -213,6 +223,7 @@ let generalize ty =
     make_typ_scheme free_vars ty
 
 let rec substitute subst = function
+    | TAlias (s, t) -> TAlias (s, substitute subst t)
     | TList t -> TList (substitute subst t)
     | TTuple tl -> TTuple (List.map (fun x -> substitute subst x) tl)
     | TConstr (t1, t2) -> TConstr (substitute subst t1, substitute subst t2)
@@ -262,38 +273,6 @@ let infer_binary op tl tr pos =
         unify (TList tl) tr pos;
         tr
 
-
-let rec typ_from_expr pos = function
-    | TE_Name "unit" -> TUnit
-    | TE_Name "int" -> TInt
-    | TE_Name "float" -> TFloat
-    | TE_Name "bool" -> TBool
-    | TE_Name "char" -> TChar
-    | TE_Name "string" -> TString
-    | TE_Name id ->
-        let tysym =
-            try
-                Symbol.lookup_tysym id
-            with Not_found ->
-                (try
-                    Symbol.lookup_tysym_default id
-                with Not_found -> error pos @@ "'" ^ id ^ "' not found")
-        in
-        tysym.tys.body
-    | TE_Message (e, id) -> (*TODO*) failwith "TE_Message TODO"
-    | TE_Var n -> TVar (n, {contents=None})
-    | TE_Tuple el -> TTuple (List.map (typ_from_expr pos) el)
-    | TE_Fun (e1, e2) -> TFun (typ_from_expr pos e1, typ_from_expr pos e2)
-    | TE_Constr (e1, TE_Name "list") -> TList (typ_from_expr pos e1)
-    | TE_Constr (e1, e2) ->
-        let t1 = typ_from_expr pos e1 in
-        let t2 = typ_from_expr pos e2 in
-        TConstr (t1, t2)
-
-let rec typ_from_decl pos = function
-    | TD_Alias e -> typ_from_expr pos e
-    | TD_Record _ -> (*TODO*) failwith "TD_Record TODO"
-    | TD_Variant _ -> (*TODO*) failwith "TD_Variant TODO"
 
 let rec infer e = 
     debug_in "infer";
@@ -462,14 +441,14 @@ let rec infer e =
             TUnit
         | (ETypeDecl (tvs, id, tyd), pos) ->
             debug_print @@ "type decl [" ^ s_list string_of_int "," tvs ^ "] " ^ id ^ " = " ^ s_typ_decl tyd;
-            let ty = typ_from_decl pos tyd in
+            let ty = Eval.typ_from_decl pos tyd in
             let tys = generalize ty in
             let tysym = { tys = tys; is_mutable = false } in
             Symbol.insert_tysym id tysym;
             TUnit
         | (EDecl (id, tye), pos) ->
             debug_print @@ "decl " ^ id ^ " : " ^ s_typ_expr tye;
-            let ty = typ_from_expr pos tye in
+            let ty = Eval.typ_from_expr pos tye in
             (try
                 let tysym = Symbol.lookup_tysym id in
                 if not (decl_equal tysym.tys.body ty) then

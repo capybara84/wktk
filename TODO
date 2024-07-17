@@ -1,8 +1,15 @@
+TD_Alias は間違っていないんだけど、
+定義後は名前で扱ってほしいのだが展開されちゃう。
+そらそうか。名前で扱う必要がある。
+TAlias of string * typ
+を作ってみたけど、、どこでTAliasを使えばいいのか
+
 現時点で、
 type 'a ll = 'a list -> int
 length : 'a ll
 length x = if x = [] then 0 else 1 + length (List.tl x)
 が型エラーになる
+
 
 typ_expr と typ_decl をinferする時に、typ に変換して、
 以降はtypで扱う、ってのがいいかなと思う。

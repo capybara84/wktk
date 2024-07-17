@@ -318,7 +318,7 @@ and get_tokens scan acc =
                 debug_print "get_tokens: identifier";
                 let id = get_ident scan in
                 let tk = match id with
-                    | "module" -> MODULE | "import" -> IMPORT | "as" -> AS
+                    | "module" -> MODULE | "import" -> IMPORT | "as" -> AS | "decl" -> DECL
                     | "type" -> TYPE | "let" -> LET | "in" -> IN | "mut" -> MUT
                     | "fn" -> FN | "if" -> IF | "then" -> THEN | "else" -> ELSE
                     | _ -> Id id

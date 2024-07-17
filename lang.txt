@@ -2,7 +2,7 @@
 toplevel
     = { ';' | NEWLINE | topdecl }
 topdecl
-    = module | import | type_def | expr
+    = module | import | type_def | decl_def | expr
 program
     = { ';' | NEWLINE | decl }
 decl
@@ -12,6 +12,8 @@ id_def
     | ID ':' typexpr
 params
     = { ID | '()' }
+decl_def
+    = DECL ID ':' typexpr
 
 module
     = MODULE ID

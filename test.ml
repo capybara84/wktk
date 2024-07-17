@@ -252,6 +252,7 @@ let parser_test_data = [
     ("type point3d = {\n  mut x : float\n  mut y : float\n  mut z : float\n}",
         "(ETypeDecl ([], \"point3d\", (TD_Record [(\"x\", true, (TE_Name \"float\"));(\"y\", true, (TE_Name \"float\"));(\"z\", true, (TE_Name \"float\"))])))");
     ("type 'a ll = 'a list", "(ETypeDecl ([0], \"ll\", (TD_Alias (TE_Constr ((TE_Var 0), (TE_Name \"list\"))))))");
+    ("decl len : 'a ll -> int", "(EDecl (\"len\", (TE_Fun ((TE_Constr ((TE_Var 0), (TE_Name \"ll\"))), (TE_Name \"int\")))))");
 ]
 
 let parser_test () =
@@ -342,15 +343,32 @@ let type_test_data = [
 (*
     ("fn b -> fn f -> let g1 = fn x -> x f in let g2 = fn x -> x f in fn z -> if b then g1 z g2 else g2 z g1", "bool -> 'a -> ('a -> (('a -> 'b) -> 'b) -> 'c) -> 'c");
 *)
+
+(*
+    ("type 'a ll = 'a list", "unit");
+    ("decl a : int ll", "unit");
+    ("a", "int ll");
+*)
+
+    ("type integer = int", "unit");
+    ("decl a : integer", "unit");
+    ("a", "integer");
+
+(*
+    ("decl len : 'a ll -> int", "unit");
+    ("let len x = if x = [] then 0 else 1 + len (List.tl x) in len [1,2,3]", "int");
+*)
 ]
 
 let type_test () =
     print_string "Type Test: ";
     let do_type_test (txt, expected) =
         try
+            verbose @@ "source : " ^ txt;
             let e = Parser.parse_text true txt in
             let t = Type.infer e in
-            verbose @@ s_expr e ^ " : " ^ s_typ t;
+            verbose @@ "result  : " ^ s_expr e ^ " : " ^ s_typ t;
+            verbose @@ "expected: " ^ expected;
             if String.equal (s_typ t) expected then
                 test_ok ()
             else
@@ -437,6 +455,10 @@ let eval_test_data = [
     ("\"ab\" + ['c']", VCons (VChar 'a', VCons (VChar 'b', VCons (VChar 'c', VNil))));
     ("(1,2)", VTuple [VInt 1;VInt 2]);
     ("('a',2)", VTuple [VChar 'a';VInt 2]);
+    ("type 'a ll = 'a list", VUnit);
+    ("decl a : 'a ll", VUnit);
+    ("decl len : 'a ll -> int", VUnit);
+    ("let len x = if x = [] then 0 else 1 + len (List.tl x) in len [1,2,3]", VInt 3);
 ]
 
 

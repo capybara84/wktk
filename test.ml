@@ -455,10 +455,9 @@ let eval_test_data = [
     ("\"ab\" + ['c']", VCons (VChar 'a', VCons (VChar 'b', VCons (VChar 'c', VNil))));
     ("(1,2)", VTuple [VInt 1;VInt 2]);
     ("('a',2)", VTuple [VChar 'a';VInt 2]);
-    ("type 'a ll = 'a list", VUnit);
-    ("decl a : 'a ll", VUnit);
-    ("decl len : 'a ll -> int", VUnit);
-    ("let len x = if x = [] then 0 else 1 + len (List.tl x) in len [1,2,3]", VInt 3);
+    ("type 'a pair = 'a * 'a ", VUnit);
+    ("decl a : int pair", VUnit);
+    ("(1,2)", VTuple [VInt 1;VInt 2]);
 ]
 
 

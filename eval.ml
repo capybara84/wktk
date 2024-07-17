@@ -49,8 +49,8 @@ let rec typ_from_expr pos = function
         let t2 = typ_from_expr pos e2 in
         TConstr (t1, t2)
 
-let rec typ_from_decl pos = function
-    | TD_Alias e -> typ_from_expr pos e
+let rec typ_from_decl pos id = function
+    | TD_Alias e -> TAlias (id, typ_from_expr pos e)
     | TD_Record _ -> (*TODO*) failwith "TD_Record TODO"
     | TD_Variant _ -> (*TODO*) failwith "TD_Variant TODO"
 
@@ -342,7 +342,7 @@ let rec eval e =
             VUnit
         | (ETypeDecl (tvs, id, tyd), pos) ->
             debug_print @@ "type decl [" ^ s_list string_of_int "," tvs ^ "] " ^ id ^ " = " ^ s_typ_decl tyd;
-            let ty = typ_from_decl pos tyd in
+            let ty = typ_from_decl pos id tyd in
             let sym = { v = VType ty; is_mutable = false } in
             Symbol.insert_sym id sym;
             VUnit

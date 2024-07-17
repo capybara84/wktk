@@ -13,6 +13,7 @@ type 'a ref = { mut contents : 'a }
 type 'a r = 'a ref
 type 'a pair = ('a * 'a)
 type ('a, 'b) pair = ('a * 'b)
+type ('a, 'b, 'c) pairs = 'c * ('a, 'b) pair
 type point2d = { mut x : int; mut y : int }
 type 'a point2d = { x : 'a; y : 'a }
 type point3d = {

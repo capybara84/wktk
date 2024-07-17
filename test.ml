@@ -233,6 +233,8 @@ let parser_test_data = [
         "(ETypeDecl ([0], \"pair\", (TD_Alias (TE_Tuple [(TE_Var 0);(TE_Var 0)]))))");
     ("type ('a, 'b) pair = 'a * 'b",
         "(ETypeDecl ([0;1], \"pair\", (TD_Alias (TE_Tuple [(TE_Var 0);(TE_Var 1)]))))");
+    ("type ('a, 'b, 'c) pairs = 'c * ('a, 'b) pair",
+        "(ETypeDecl ([0;1;2], \"pairs\", (TD_Alias (TE_Tuple [(TE_Var 2);(TE_Constr ((TE_Tuple [(TE_Var 0);(TE_Var 1)]), (TE_Name \"pair\")))]))))");
     ("type list = List.t",
         "(ETypeDecl ([], \"list\", (TD_Alias (TE_Message ((TE_Name \"List\"), \"t\")))))");
     ("type color = | Red | Green | Blue",

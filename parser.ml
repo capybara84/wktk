@@ -587,25 +587,6 @@ and parse_expr p =
     debug_out @@ "parse_expr:" ^ s_expr res;
     res
 
-(*
-typexpr_primary
-    = TVAR | typname | '(' typexpr ')'
-*)
-and parse_typexpr_primary p =
-    debug_in @@ "parse_typexpr_primary";
-    let res =
-        match token p with
-        | TypId n -> next_token p; TE_Var n
-        | Id _ -> parse_typname p
-        | LPAR ->
-            next_token p;
-            let e = parse_typexpr p in
-            expect p RPAR;
-            e
-        | tk -> error (get_pos p) @@ "syntax error at '" ^ s_token tk ^ "' (typexpr_primary)"
-    in
-    debug_out @@ "parse_typexpr_primary:" ^ s_typ_expr res;
-    res
 
 (*
 typname
@@ -635,17 +616,63 @@ and parse_typname p =
     res
 
 (*
+typexpr_primary
+    = TVAR | typname | '(' typexpr ')'
+*)
+and parse_typexpr_primary p =
+    debug_in @@ "parse_typexpr_primary";
+    let res =
+        match token p with
+        | TypId n -> next_token p; TE_Var n
+        | Id _ -> parse_typname p
+        | LPAR ->
+            next_token p;
+            let e = parse_typexpr p in
+            expect p RPAR;
+            e
+        | tk -> error (get_pos p) @@ "syntax error at '" ^ s_token tk ^ "' (typexpr_primary)"
+    in
+    debug_out @@ "parse_typexpr_primary:" ^ s_typ_expr res;
+    res
+
+(*
 typexpr_ctor
     = typexpr_primary {typname}
+typexpr_primary
+    = TVAR | typname | '(' typexpr ')'
 --
 typexpr_ctor
     = '(' typexpr {',' typexpr} ')' {typname}
-    | typexpr_primary {typname}
+    | TVAR {typname}
+    | typname {typname}
 *)
 and parse_typexpr_ctor p =
     debug_in @@ "parse_typexpr_ctor";
-    (*TODO*)
-    let lhs = parse_typexpr_primary p in
+    let lhs =
+        match token p with
+        | LPAR ->
+            next_token p;
+            let e = parse_typexpr p in
+            let rec loop lst =
+                match token p with
+                | COMMA ->
+                    next_token p;
+                    let e = parse_typexpr p in
+                    loop (e::lst)
+                | _ -> List.rev lst
+            in
+            let lst = loop [e] in
+            let res =
+                if List.length lst = 1 then
+                    e
+                else
+                    TE_Tuple lst
+            in
+            expect p RPAR;
+            res
+        | _ ->
+            parse_typexpr_primary p
+    in
     let rec loop lhs =
         match token p with
         | Id _ ->

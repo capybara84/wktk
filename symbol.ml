@@ -125,7 +125,10 @@ let show_all_symbols modu =
     print_endline @@ "SHOW MODULE : " ^ modu.name;
     show_typ_tables modu.tenv;
     show_tables modu.env;
-    print_endline @@ "current = " ^ !current_module.name
+(*
+    print_endline @@ "current = " ^ !current_module.name;
+*)
+    ()
 
 let show_all_modules () =
     print_endline "SHOW ALL MODULES";

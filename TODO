@@ -1,23 +1,65 @@
-tuple
+型表示するとき、TAliasの場合は実体も表示したい
 
-type
-    named
-    decl
+*TD_Alias は間違っていないんだけど、
+ 定義後は名前で扱ってほしいのだが展開されちゃう。
+ そらそうか。名前で扱う必要がある。
+ TAlias of string * typ
+ を作ってみたけど、、どこでTAliasを使えばいいのか
+ TAlias対応してみた。
+ 
+
+*現時点で、
+ type 'a ll = 'a list -> int
+ length : 'a ll
+ length x = if x = [] then 0 else 1 + length (List.tl x)
+ が型エラーになる
+ 名前が違うのでエラーでいいのか。
+
+
+typ_expr と typ_decl をinferする時に、typ に変換して、
+以降はtypで扱う、ってのがいいかなと思う。
+
+*type ETypeDefとかEDecl の引数をtyp_symにしているが、typ_schemeかtypでいいのでは？
+    -> typ_expr と typ_decl にした。
+    ID で検索して型を割り当てる、みたいな前処理が必要なので。
+    parse後、infer時かなんかに。
+あちこちにあるtysym={tys=...;is_mutable=}を関数かなにかにしたい
+
+*type decl いちおうできた。type_ctor の(te,te) id形式がまだなのと、
+    前方参照ができないのをなんとかしたい。
+    そもそもtype_ctorの(te,te) id形式ってどういう時に使うんだっけ。。
+*   type ('a,'b) pair = ('a * 'b) のときの (string,int) pair ってやつだった。
+    ので対応した。
+    前方参照はなんか考える（常に前方参照できる、がいいな）
+
+*関数の型宣言
+    いちおうできた
+
 record
+
 mutable の扱いを今はis_mutableにしているが、record { mutable contents } にしたい
 assignの型チェック
 
-list
-string
-tuple
+改行チェック
+
 array
+    基本実装
+    テスト
+    ライブラリ
+
+list library
+string library
 record
 pattern match
-builtin function
 message
 
+moduleのテスト
 -----
-module
+*tuple
+    *tuple基本実装
+    *テスト
+*builtin function
+*module
     *moduleの実装
     *importの実装
 *eval

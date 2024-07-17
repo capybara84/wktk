@@ -1,0 +1,31 @@
+
+type integer = int
+type c = char 
+type s = string
+type f = unit -> int
+type f = int -> int -> int
+type 'a f = 'a -> 'a -> 'a
+type 'a x = 'a
+type t = int * char
+type f = (float)
+type l = int list
+type 'a ref = { mut contents : 'a }
+type 'a r = 'a ref
+type 'a pair = ('a * 'a)
+type ('a, 'b) pair = ('a * 'b)
+type ('a, 'b, 'c) pairs = 'c * ('a, 'b) pair
+type point2d = { mut x : int; mut y : int }
+type 'a point2d = { x : 'a; y : 'a }
+type point3d = {
+    mut x : float
+    mut y : float
+    mut z : float
+}
+type ('a,'b,'c) atob = { a : 'a; b : 'b; c : 'c }
+type color = | Red | Green | Blue
+type color = | Red | Green | Blue | RGB (int * int * int)
+type 'a option = | None | Some 'a
+type 'a tree = | Node 'a | Leaf ('a tree * 'a tree)
+type ITree = int tree
+type list = List.t
+

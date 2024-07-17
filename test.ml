@@ -25,6 +25,75 @@ let test_report () =
         if !n_fail = 0 then "0" else (red @@ string_of_int !n_fail)
 
 
+let s_binop_src = function
+    | BinAdd -> "BinAdd" | BinSub -> "BinSub" | BinMul -> "BinMul"
+    | BinDiv -> "BinDiv" | BinMod -> "BinMod" | BinLT -> "BinLT"
+    | BinLE -> "BinLE" | BinGT -> "BinGT" | BinGE -> "BinGE"
+    | BinEq -> "BinEq" | BinNeq -> "BinNeq"
+    | BinEql -> "BinEql" | BinNeql -> "BinNeql" | BinLOr -> "BinLOr"
+    | BinLAnd -> "BinLAnd" | BinCons -> "BinCons"
+let s_unop_src = function UNot -> "UNot" | UMinus -> "UMinus"
+
+let rec s_expr_src = function
+    | (EEof, _) -> "EEof"
+    | (EUnit, _) -> "EUnit"
+    | (ENil, _) -> "ENil"
+    | (EBool b, _) -> "(EBool " ^ string_of_bool b ^ ")"
+    | (EInt n, _) -> "(EInt " ^ string_of_int n ^ ")"
+    | (EFloat n, _) -> "(EFloat " ^ string_of_float n ^ ")"
+    | (EChar c, _) -> "(EChar '" ^ (String.make 1 c) ^ "')"
+    | (EString s, _) -> "(EString \"" ^ s ^ "\")"
+    | (EId s, _) -> "(EId \"" ^ s ^ "\")"
+    | (EModule s, _) -> "(EModule \"" ^ s ^ "\")"
+    | (EImport (s, None), _) -> "(EImport (\"" ^ s ^ "\", None))"
+    | (EImport (s, Some a), _) -> "(EImport (\"" ^ s ^ "\", Some \"" ^ a ^ "\"))"
+    | (ETuple el, _) -> "(ETuple [" ^ s_list s_expr_src "; " el ^ "])"
+    | (EUnary (op, e), _) -> "(EUnary (" ^ s_unop_src op ^ ", " ^ s_expr_src e ^ "))"
+    | (EBinary (op, lhs, rhs), _) ->
+        "(EBinary (" ^ s_binop_src op ^ ", " ^ s_expr_src lhs ^ ", " ^ s_expr_src rhs ^ "))"
+    | (EApply (f, a), _) -> "(EApply (" ^ s_expr_src f ^ ", " ^ s_expr_src a ^ "))"
+    | (ELet (ll, e), _) ->
+        "(ELet ([" ^ s_list s_expr_src "; " ll ^ "], " ^ s_expr_src e ^ "))"
+    | (EValDef (b, id, e), _) ->
+        "(EValDef (" ^ string_of_bool b ^ ", \"" ^ id ^ "\", " ^ s_expr_src e ^ "))"
+    | (EFuncDef (id, e), _) ->
+        "(EFuncDef (\"" ^ id ^ "\", " ^ s_expr_src e ^ "))"
+    | (ELambda (a, b), _) -> "(ELambda (" ^ s_expr_src a ^ ", " ^ s_expr_src b ^ "))"
+    | (ECond (c, t, e), _) ->
+        "(ECond (" ^ s_expr_src c ^ ", " ^ s_expr_src t ^ ", " ^ s_expr_src e ^ "))"
+    | (EAssign (lhs, rhs), _) ->
+        "(EAssign (" ^ s_expr_src lhs ^ ", " ^ s_expr_src rhs ^ "))"
+    | (EMessage (lhs, s), _) -> "(EMessage (" ^ s_expr_src lhs ^ ", \"" ^ s ^ "\"))"
+    | (EBlock el, _) -> "(EBlock [" ^ s_list s_expr "; " el ^ "])"
+    | (ESeq el, _) -> "(ESeq [" ^ s_list s_expr ";\n" el ^ "])"
+    | (ETypeDecl (fs, id, tyd), _) ->
+        "(ETypeDecl ([" ^ s_list string_of_int ";" fs ^ "], \"" ^ id ^ "\", " ^ s_typ_decl_src tyd ^ "))"
+    | (EDecl (id, tye), _) ->
+        "(EDecl (\"" ^ id ^ "\", " ^ s_typ_expr_src tye ^ "))"
+
+and s_typ_expr_src = function
+    | TE_Name id -> "(TE_Name \"" ^ id ^ "\")"
+    | TE_Message (e, id) -> "(TE_Message (" ^ s_typ_expr_src e ^ ", \"" ^ id ^ "\"))"
+    | TE_Var n -> "(TE_Var " ^ string_of_int n ^ ")"
+    | TE_Tuple tl -> "(TE_Tuple [" ^ s_list s_typ_expr_src ";" tl ^ "])"
+    | TE_Fun (t1, t2) -> "(TE_Fun (" ^ s_typ_expr_src t1 ^ ", " ^ s_typ_expr_src t2 ^ "))"
+    | TE_Constr (t1, t2) -> "(TE_Constr (" ^ s_typ_expr_src t1 ^ ", " ^ s_typ_expr_src t2 ^ "))"
+
+and s_typ_decl_src = function
+    | TD_Alias tye -> "(TD_Alias " ^ s_typ_expr_src tye ^ ")"
+    | TD_Record rl -> "(TD_Record [" ^ s_list s_typ_record_src ";" rl ^ "])"
+    | TD_Variant vl -> "(TD_Variant [" ^ s_list s_typ_variant_src ";" vl ^ "])"
+
+and s_typ_record_src = function
+    | (id, b, te) ->
+        "(\"" ^ id ^ "\", " ^ string_of_bool b ^ ", " ^ s_typ_expr_src te ^ ")"
+
+and s_typ_variant_src = function
+    | (id, None) -> "(\"" ^ id ^ "\", None)"
+    | (id, Some te) -> "(\"" ^ id ^ "\", Some " ^ s_typ_expr_src te ^ ")"
+
+
+
 let scanner_test_text = "a
 /* test
     /* nest */
@@ -103,58 +172,101 @@ let scanner_test () =
         | Sys_error s -> print_endline s
 
 let parser_test_data = [
-    (";");
-    ("\n\n;\n");
-    ("let one = 1 in one");
-    ("let _ = 2 in ()");
-    ("let id x = x in id 0");
-    ("let add x y = x + y in add 1 2");
-    ("let foo () = () in foo");
-    ("let bar _ = () in bar ()");
-    ("let _ = 1 in ()");
-    ("let one = 1; two = 2 in one + two");
-    ("let mut var = 1 in var <- 2");
-    ("if 1 == 1 then 2 else 3");
-    ("fn x -> x");
-    ("fn x y -> x + y");
-    ("x <- 1");
-    ("1 ? 2 : 3");
-    ("1 || 2");
-    ("1 && 2");
-    ("1 < 2");
-    ("1 <= 2");
-    ("1 > 2");
-    ("1 >= 2");
-    ("1 == 2");
-    ("1 != 2");
-    ("1 = 2");
-    ("1 <> 2");
-    ("1::2");
-    ("1::2::[3]");
-    ("1 + 2 - 3");
-    ("1 - 2 * 3");
-    ("1 - 2 / 3");
-    ("1 - 2 % 3");
-    ("foo ()");
-    ("foo 1");
-    ("bar 1 2");
-    ("-1");
-    ("!2");
-    ("'a'");
-    ("\"abc\"");
-    ("[1,2,3]");
-    ("[]");
-    ("()");
+    (";", "EEof");
+    ("\n\n;\n", "EEof");
+    ("let one = 1 in one", "(ELet ([(EValDef (false, \"one\", (EInt 1)))], (EId \"one\")))");
+    ("let _ = 2 in ()", "(ELet ([(EValDef (false, \"_\", (EInt 2)))], EUnit))");
+    ("let id x = x in id 0", "(ELet ([(EFuncDef (\"id\", (ELambda ((EId \"x\"), (EId \"x\")))))], (EApply ((EId \"id\"), (EInt 0)))))");
+    ("let add x y = x + y in add 1 2", "(ELet ([(EFuncDef (\"add\", (ELambda ((EId \"x\"), (ELambda ((EId \"y\"), (EBinary (BinAdd, (EId \"x\"), (EId \"y\")))))))))], (EApply ((EApply ((EId \"add\"), (EInt 1))), (EInt 2)))))");
+    ("let foo () = () in foo", "(ELet ([(EFuncDef (\"foo\", (ELambda (EUnit, EUnit))))], (EId \"foo\")))");
+    ("let bar _ = () in bar ()", "(ELet ([(EFuncDef (\"bar\", (ELambda ((EId \"_\"), EUnit))))], (EApply ((EId \"bar\"), EUnit))))");
+    ("let _ = 1 in ()", "(ELet ([(EValDef (false, \"_\", (EInt 1)))], EUnit))");
+    ("let one = 1; two = 2 in one + two", "(ELet ([(EValDef (false, \"one\", (EInt 1))); (EValDef (false, \"two\", (EInt 2)))], (EBinary (BinAdd, (EId \"one\"), (EId \"two\")))))");
+    ("let mut var = 1 in var <- 2", "(ELet ([(EValDef (true, \"var\", (EInt 1)))], (EAssign ((EId \"var\"), (EInt 2)))))");
+    ("if 1 == 1 then 2 else 3", "(ECond ((EBinary (BinEql, (EInt 1), (EInt 1))), (EInt 2), (EInt 3)))");
+    ("fn x -> x", "(ELambda ((EId \"x\"), (EId \"x\")))");
+    ("fn x y -> x + y", "(ELambda ((EId \"x\"), (ELambda ((EId \"y\"), (EBinary (BinAdd, (EId \"x\"), (EId \"y\")))))))");
+    ("x <- 1", "(EAssign ((EId \"x\"), (EInt 1)))");
+    ("1 ? 2 : 3", "(ECond ((EInt 1), (EInt 2), (EInt 3)))");
+    ("1 || 2", "(EBinary (BinLOr, (EInt 1), (EInt 2)))");
+    ("1 && 2", "(EBinary (BinLAnd, (EInt 1), (EInt 2)))");
+    ("1 < 2", "(EBinary (BinLT, (EInt 1), (EInt 2)))");
+    ("1 <= 2", "(EBinary (BinLE, (EInt 1), (EInt 2)))");
+    ("1 > 2", "(EBinary (BinGT, (EInt 1), (EInt 2)))");
+    ("1 >= 2", "(EBinary (BinGE, (EInt 1), (EInt 2)))");
+    ("1 == 2", "(EBinary (BinEql, (EInt 1), (EInt 2)))");
+    ("1 != 2", "(EBinary (BinNeql, (EInt 1), (EInt 2)))");
+    ("1 = 2", "(EBinary (BinEq, (EInt 1), (EInt 2)))");
+    ("1 <> 2", "(EBinary (BinNeq, (EInt 1), (EInt 2)))");
+    ("1::2", "(EBinary (BinCons, (EInt 1), (EInt 2)))");
+    ("1::2::[3]", "(EBinary (BinCons, (EInt 1), (EBinary (BinCons, (EInt 2), (EBinary (BinCons, (EInt 3), ENil))))))");
+    ("1 + 2 - 3", "(EBinary (BinAdd, (EInt 1), (EBinary (BinSub, (EInt 2), (EInt 3)))))");
+    ("1 - 2 * 3", "(EBinary (BinSub, (EInt 1), (EBinary (BinMul, (EInt 2), (EInt 3)))))");
+    ("1 - 2 / 3", "(EBinary (BinSub, (EInt 1), (EBinary (BinDiv, (EInt 2), (EInt 3)))))");
+    ("1 - 2 % 3", "(EBinary (BinSub, (EInt 1), (EBinary (BinMod, (EInt 2), (EInt 3)))))");
+    ("foo ()", "(EApply ((EId \"foo\"), EUnit))");
+    ("foo 1", "(EApply ((EId \"foo\"), (EInt 1)))");
+    ("bar 1 2", "(EApply ((EApply ((EId \"bar\"), (EInt 1))), (EInt 2)))");
+    ("-1", "(EUnary (UMinus, (EInt 1)))");
+    ("!2", "(EUnary (UNot, (EInt 2)))");
+    ("'a'", "(EChar 'a')");
+    ("\"abc\"", "(EString \"abc\")");
+    ("[1,2,3]", "(EBinary (BinCons, (EInt 1), (EBinary (BinCons, (EInt 2), (EBinary (BinCons, (EInt 3), ENil))))))");
+    ("[]", "ENil");
+    ("()", "EUnit");
+    ("[ ]", "ENil");
+    ("type c = char",
+        "(ETypeDecl ([], \"c\", (TD_Alias (TE_Name \"char\"))))");
+    ("type f = unit -> int",
+        "(ETypeDecl ([], \"f\", (TD_Alias (TE_Fun ((TE_Name \"unit\"), (TE_Name \"int\"))))))");
+    ("type t = (int * char)",
+        "(ETypeDecl ([], \"t\", (TD_Alias (TE_Tuple [(TE_Name \"int\");(TE_Name \"char\")]))))");
+    ("type l = int list",
+        "(ETypeDecl ([], \"l\", (TD_Alias (TE_Constr ((TE_Name \"int\"), (TE_Name \"list\"))))))");
+    ("type ITree = int tree",
+        "(ETypeDecl ([], \"ITree\", (TD_Alias (TE_Constr ((TE_Name \"int\"), (TE_Name \"tree\"))))))");
+    ("type c = (float)",
+        "(ETypeDecl ([], \"c\", (TD_Alias (TE_Name \"float\"))))");
+    ("type 'a x = 'a",
+        "(ETypeDecl ([0], \"x\", (TD_Alias (TE_Var 0))))");
+    ("type 'a pair = 'a * 'a",
+        "(ETypeDecl ([0], \"pair\", (TD_Alias (TE_Tuple [(TE_Var 0);(TE_Var 0)]))))");
+    ("type ('a, 'b) pair = 'a * 'b",
+        "(ETypeDecl ([0;1], \"pair\", (TD_Alias (TE_Tuple [(TE_Var 0);(TE_Var 1)]))))");
+    ("type ('a, 'b, 'c) pairs = 'c * ('a, 'b) pair",
+        "(ETypeDecl ([0;1;2], \"pairs\", (TD_Alias (TE_Tuple [(TE_Var 2);(TE_Constr ((TE_Tuple [(TE_Var 0);(TE_Var 1)]), (TE_Name \"pair\")))]))))");
+    ("type list = List.t",
+        "(ETypeDecl ([], \"list\", (TD_Alias (TE_Message ((TE_Name \"List\"), \"t\")))))");
+    ("type color = | Red | Green | Blue",
+        "(ETypeDecl ([], \"color\", (TD_Variant [(\"Red\", None);(\"Green\", None);(\"Blue\", None)])))");
+    ("type color = | Red | Green | Blue | RGB (int * int * int)",
+        "(ETypeDecl ([], \"color\", (TD_Variant [(\"Red\", None);(\"Green\", None);(\"Blue\", None);(\"RGB\", Some (TE_Tuple [(TE_Name \"int\");(TE_Name \"int\");(TE_Name \"int\")]))])))");
+    ("type 'a option = | None | Some 'a",
+        "(ETypeDecl ([0], \"option\", (TD_Variant [(\"None\", None);(\"Some\", Some (TE_Var 0))])))");
+    ("type 'a tree = | Node 'a | Leaf ('a tree * 'a tree)",
+        "(ETypeDecl ([0], \"tree\", (TD_Variant [(\"Node\", Some (TE_Var 0));(\"Leaf\", Some (TE_Tuple [(TE_Constr ((TE_Var 0), (TE_Name \"tree\")));(TE_Constr ((TE_Var 0), (TE_Name \"tree\")))]))])))");
+    ("type point2d = { mut x : int; mut y : int }",
+        "(ETypeDecl ([], \"point2d\", (TD_Record [(\"x\", true, (TE_Name \"int\"));(\"y\", true, (TE_Name \"int\"))])))");
+    ("type 'a point2d = { x : 'a; y : 'a }",
+        "(ETypeDecl ([0], \"point2d\", (TD_Record [(\"x\", false, (TE_Var 0));(\"y\", false, (TE_Var 0))])))");
+    ("type point3d = {\n  mut x : float\n  mut y : float\n  mut z : float\n}",
+        "(ETypeDecl ([], \"point3d\", (TD_Record [(\"x\", true, (TE_Name \"float\"));(\"y\", true, (TE_Name \"float\"));(\"z\", true, (TE_Name \"float\"))])))");
+    ("type 'a ll = 'a list", "(ETypeDecl ([0], \"ll\", (TD_Alias (TE_Constr ((TE_Var 0), (TE_Name \"list\"))))))");
+    ("decl len : 'a ll -> int", "(EDecl (\"len\", (TE_Fun ((TE_Constr ((TE_Var 0), (TE_Name \"ll\"))), (TE_Name \"int\")))))");
 ]
 
 let parser_test () =
     print_string "Parser Test: ";
-    let do_test txt =
+    let do_test (txt, expected) =
         try
             verbose @@ "parse: " ^ txt;
             let e = Parser.parse_text true txt in
             verbose @@ "result: " ^ s_expr e;
-            test_ok()
+            verbose @@ "result: " ^ s_expr_src e;
+            if String.equal (s_expr_src e) expected then
+                test_ok()
+            else
+                test_fail ("\n" ^ s_expr_src e ^ " <>\n" ^ expected)
         with
             | Error (pos, msg) -> test_fail @@ s_pos pos ^ "Error: " ^ msg
             | End_of_file -> test_fail "End_of_file"
@@ -185,6 +297,9 @@ let type_test_data = [
     ("['a','b']", "char list");
     ("\"abc\"", "string");
     ("let id x = x in id 1", "int");
+    ("(1,2)", "(int * int)");
+    ("('a',2)", "(char * int)");
+    ("[(1,2,'a')]", "(int * int * char) list");
     ("(fn x -> x)", "'a -> 'a");
     ("fn x -> fn y -> x", "'a -> 'b -> 'a");
     ("fn x -> fn y -> y", "'a -> 'b -> 'b");
@@ -228,15 +343,32 @@ let type_test_data = [
 (*
     ("fn b -> fn f -> let g1 = fn x -> x f in let g2 = fn x -> x f in fn z -> if b then g1 z g2 else g2 z g1", "bool -> 'a -> ('a -> (('a -> 'b) -> 'b) -> 'c) -> 'c");
 *)
+
+(*
+    ("type 'a ll = 'a list", "unit");
+    ("decl a : int ll", "unit");
+    ("a", "int ll");
+*)
+
+    ("type integer = int", "unit");
+    ("decl a : integer", "unit");
+    ("a", "integer");
+
+(*
+    ("decl len : 'a ll -> int", "unit");
+    ("let len x = if x = [] then 0 else 1 + len (List.tl x) in len [1,2,3]", "int");
+*)
 ]
 
 let type_test () =
     print_string "Type Test: ";
     let do_type_test (txt, expected) =
         try
+            verbose @@ "source : " ^ txt;
             let e = Parser.parse_text true txt in
             let t = Type.infer e in
-            verbose @@ s_expr e ^ " : " ^ s_typ t;
+            verbose @@ "result  : " ^ s_expr e ^ " : " ^ s_typ t;
+            verbose @@ "expected: " ^ expected;
             if String.equal (s_typ t) expected then
                 test_ok ()
             else
@@ -317,6 +449,15 @@ let eval_test_data = [
     ("let id x = x in id 1", VInt 1);
     ("let mut x = 1 in\n  x <- 2\n  x", VInt 2);
     ("let x = 1; y = 2 in x + y", VInt 3);
+    ("module A", VUnit);
+    ("let length x = x = [] ? 0 : 1 + length (List.tl x) in length [1,2]", VInt 2);
+    ("[1,2] + [3]", VCons(VInt 1, VCons(VInt 2, VCons(VInt 3, VNil))));
+    ("\"ab\" + ['c']", VCons (VChar 'a', VCons (VChar 'b', VCons (VChar 'c', VNil))));
+    ("(1,2)", VTuple [VInt 1;VInt 2]);
+    ("('a',2)", VTuple [VChar 'a';VInt 2]);
+    ("type 'a pair = 'a * 'a ", VUnit);
+    ("decl a : int pair", VUnit);
+    ("(1,2)", VTuple [VInt 1;VInt 2]);
 ]
 
 

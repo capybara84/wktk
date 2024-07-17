@@ -22,6 +22,40 @@ let debug_out s =
         (decr debug_indent; debug_print @@ "OUT " ^ s)
 
 
+let rec typ_from_expr pos = function
+    | TE_Name "unit" -> TUnit
+    | TE_Name "int" -> TInt
+    | TE_Name "float" -> TFloat
+    | TE_Name "bool" -> TBool
+    | TE_Name "char" -> TChar
+    | TE_Name "string" -> TString
+    | TE_Name id ->
+        let tysym =
+            try
+                Symbol.lookup_tysym id
+            with Not_found ->
+                (try
+                    Symbol.lookup_tysym_default id
+                with Not_found -> error pos @@ "'" ^ id ^ "' not found")
+        in
+        tysym.tys.body
+    | TE_Message (e, id) -> (*TODO*) failwith "TE_Message TODO"
+    | TE_Var n -> TVar (n, {contents=None})
+    | TE_Tuple el -> TTuple (List.map (typ_from_expr pos) el)
+    | TE_Fun (e1, e2) -> TFun (typ_from_expr pos e1, typ_from_expr pos e2)
+    | TE_Constr (e1, TE_Name "list") -> TList (typ_from_expr pos e1)
+    | TE_Constr (e1, e2) ->
+        let t1 = typ_from_expr pos e1 in
+        let t2 = typ_from_expr pos e2 in
+        TConstr (t1, t2)
+
+let rec typ_from_decl pos id = function
+    | TD_Alias e -> TAlias (id, typ_from_expr pos e)
+    | TD_Record _ -> (*TODO*) failwith "TD_Record TODO"
+    | TD_Variant _ -> (*TODO*) failwith "TD_Variant TODO"
+
+
+
 let rec cons_append x y =
     match x with
     | VNil -> y
@@ -71,7 +105,14 @@ let rec eval_shallow_equal pos = function
     | (VCons _, VNil) | (VNil, VCons _) -> false
     | (VString "", VNil) | (VNil, VString "") -> false
     | (VString _, VNil) | (VNil, VString _) -> false
+    | (VTuple xl, VTuple yl) -> shallow_equal_tuple pos (xl, yl)
     | (lhs, rhs) -> error pos @@ "type error (shallow equal) " ^ s_value lhs ^ " & " ^ s_value rhs
+and shallow_equal_tuple pos = function
+    | ([], []) -> true
+    | (_, []) | ([], _) -> false
+    | (x::xs, y::ys) ->
+        if not (eval_shallow_equal pos (x, y)) then false
+        else shallow_equal_tuple pos (xs, ys)
 
 let rec eval_deep_equal pos = function
     | (VUnit, VUnit) -> true
@@ -86,7 +127,14 @@ let rec eval_deep_equal pos = function
     | (VCons _, VNil) | (VNil, VCons _) -> false
     | (VString "", VNil) | (VNil, VString "") -> true
     | (VString _, VNil) | (VNil, VString _) -> false
+    | (VTuple xl, VTuple yl) -> deep_equal_tuple pos (xl, yl)
     | (lhs, rhs) -> error pos @@ "type error (deep equal) " ^ s_value lhs ^ " & " ^ s_value rhs
+and deep_equal_tuple pos = function
+    | ([], []) -> true
+    | (_, []) | ([], _) -> false
+    | (x::xs, y::ys) ->
+        if not (eval_deep_equal pos (x, y)) then false
+        else deep_equal_tuple pos (xs, ys)
 
 let eval_binary pos = function
     | (BinEq, vl, vr) -> VBool (eval_deep_equal pos (vl, vr))
@@ -167,6 +215,9 @@ let rec eval e =
                         Symbol.lookup_default s
                     with Not_found -> error pos @@ "'" ^ s ^ "' not found")
             in sym.v
+        | (ETuple el, _) ->
+            debug_print @@ "eval tuple " ^ s_expr e;
+            VTuple (List.map (fun x -> eval x) el)
         | (EUnary (op, e), pos) ->
             debug_print @@ "eval unary " ^ s_unop op ^ " " ^ s_expr e;
             let v = eval e in
@@ -288,6 +339,15 @@ let rec eval e =
             VUnit
         | (EImport (mid, aid), pos) ->
             debug_print @@ "eval import " ^ mid;
+            VUnit
+        | (ETypeDecl (tvs, id, tyd), pos) ->
+            debug_print @@ "type decl [" ^ s_list string_of_int "," tvs ^ "] " ^ id ^ " = " ^ s_typ_decl tyd;
+            let ty = typ_from_decl pos id tyd in
+            let sym = { v = VType ty; is_mutable = false } in
+            Symbol.insert_sym id sym;
+            VUnit
+        | (EDecl (id, tye), _) ->
+            debug_print @@ "decl " ^ id ^ " : " ^ s_typ_expr tye;
             VUnit
     in
     debug_out @@ "eval > " ^ s_value res;

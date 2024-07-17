@@ -1,0 +1,12 @@
+
+//type 'a ll = ('a) list -> int
+//length : 'a ll
+type 'a ll = 'a list
+length : 'a ll -> int
+length x =
+    if x = [] then 0
+    else 1 + length (List.tl x)
+
+_ =
+    prn (length [1,2])
+    //modules()

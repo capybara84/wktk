@@ -86,6 +86,7 @@ type expr_decl =
     | EBool of bool | EInt of int | EFloat of float | EChar of char
     | EString of string | EId of string
     | EModule of string | EImport of string * string option
+    | ERecord of (string * expr) list
     | ETuple of expr list
     | EUnary of unop * expr
     | EBinary of binop * expr * expr
@@ -124,8 +125,8 @@ and value =
     | VTuple of value list
     | VClosure of expr * expr * env
     | VBuiltin of (pos -> expr -> value)
+    | VRecord of (string * bool * value ref) list
 (*
-    | VRecord of (string * bool * ref value) list
     | VVariant of string * value option
 *)
 and
@@ -244,6 +245,7 @@ let rec s_expr = function
     | (EModule s, _) -> "module " ^ s ^ "\n"
     | (EImport (s, None), _) -> "import " ^ s ^ "\n"
     | (EImport (s, Some a), _) -> "import " ^ s ^ " as " ^ a ^ "\n"
+    | (ERecord rl, _) -> "{" ^ s_list (fun (id, e) -> id ^ " = " ^ s_expr e) ";" rl ^ "}"
     | (ETuple el, _) -> "(" ^ s_list s_expr ", " el ^ ")"
     | (EUnary (op, e), _) -> "(" ^ s_unop op ^ s_expr e ^ ")"
     | (EBinary (op, lhs, rhs), _) ->
@@ -313,6 +315,7 @@ let rec s_value = function
     | VTuple vl -> "(" ^ s_list s_value ", " vl ^ ")"
     | VClosure _ -> "<closure>"
     | VBuiltin _ -> "<builtin>"
+    | VRecord _ -> "<record>"
 and cons_to_string = function
     | VCons (x, VNil) -> s_value x
     | VCons (x, (VCons _ as xs)) -> (s_value x) ^ ", " ^ (cons_to_string xs)

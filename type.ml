@@ -355,6 +355,10 @@ let rec infer e =
                     with Not_found -> error pos @@ "'" ^ s ^ "' not found")
             in
             instantiate tysym.tys
+        | (ERecord rl, _) ->
+            debug_print "infer record";
+            (*TODO 機械的にmapするのではなくて、メンバー名から推論したい*)
+            TRecord (List.map (fun (s,e) -> (s, false, infer e)) rl) 
         | (ETuple el, _) ->
             debug_print "infer tuple";
             TTuple (List.map (fun x -> infer x) el)

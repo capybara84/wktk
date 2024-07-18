@@ -6,7 +6,7 @@ topdecl
 program
     = { ';' | NEWLINE | decl }
 decl
-    = module | import | type_def | id_def
+    = module | import | type_def | decl_def | id_def
 id_def
     = ID {params} '=' expr
     | ID ':' typexpr
@@ -52,6 +52,7 @@ sep = ';' | NEWLINE
 expr
     = ';'
     | NEWLINE
+    | decl_def
     | let_expr
     | if_expr
     | fn_expr

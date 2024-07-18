@@ -217,6 +217,9 @@ let rec eval e =
                         Symbol.lookup_default s
                     with Not_found -> error pos @@ "'" ^ s ^ "' not found")
             in sym.v
+        | (ERecord rl, _) ->
+            debug_print @@ "eval record " ^ s_expr e;
+            VRecord [] (*TODO*)
         | (ETuple el, _) ->
             debug_print @@ "eval tuple " ^ s_expr e;
             VTuple (List.map (fun x -> eval x) el)

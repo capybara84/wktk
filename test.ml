@@ -47,6 +47,7 @@ let rec s_expr_src = function
     | (EModule s, _) -> "(EModule \"" ^ s ^ "\")"
     | (EImport (s, None), _) -> "(EImport (\"" ^ s ^ "\", None))"
     | (EImport (s, Some a), _) -> "(EImport (\"" ^ s ^ "\", Some \"" ^ a ^ "\"))"
+    | (ERecord rl, _) -> "(ERecord [" ^ s_list (fun (id, e) -> "(\"" ^ id ^ "\"," ^ s_expr e ^ ")") ";" rl ^ "])"
     | (ETuple el, _) -> "(ETuple [" ^ s_list s_expr_src "; " el ^ "])"
     | (EUnary (op, e), _) -> "(EUnary (" ^ s_unop_src op ^ ", " ^ s_expr_src e ^ "))"
     | (EBinary (op, lhs, rhs), _) ->
@@ -254,6 +255,8 @@ let parser_test_data = [
     ("type 'a ll = 'a list", "(ETypeDecl ([0], \"ll\", (TD_Alias (TE_Constr ((TE_Var 0), (TE_Name \"list\"))))))");
     ("decl len : 'a ll -> int", "(EDecl (\"len\", (TE_Fun ((TE_Constr ((TE_Var 0), (TE_Name \"ll\"))), (TE_Name \"int\")))))");
     ("type Bool = | False | True", "(ETypeDecl ([], \"Bool\", (TD_Variant [(\"False\", None);(\"True\", None)])))");
+
+    ("let p = { x = 1; y = 2 } in p", "(ELet ([(EValDef (false, \"p\", (ERecord [(\"x\",1);(\"y\",2)])))], (EId \"p\")))");
 ]
 
 let parser_test () =
@@ -358,6 +361,9 @@ let type_test_data = [
     ("let len x = if x = [] then 0 else 1 + len (List.tl x) in len [1,2,3]", "int");
 
     ("fn x -> !x", "bool -> bool");
+
+    ("type Point2D = { x : int; y : int }", "unit");
+    ("{ x = 1; y = 2 }", "{x:int;y:int}");
 ]
 
 let type_test () =
@@ -459,6 +465,8 @@ let eval_test_data = [
     ("decl a : int pair", VUnit);
     ("(1,2)", VTuple [VInt 1;VInt 2]);
     ("type Color = | Red | Green | Blue", VUnit);
+    ("type Point2D = { x : int; y : int; }", VUnit);
+    ("let p = { x = 1; y = 2 } in p", VRecord [("x",false,{contents=VInt 1});("y",false,{contents=VInt 2})]);
 ]
 
 

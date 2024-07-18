@@ -105,16 +105,6 @@ let token_to_op = function
 
 
 (*
-record_expr
-    = '{' {ID '=' expr sep} '}'
-*)
-
-(*
-array_expr
-    = '[|' expr {',' expr} [','] '|]'
-*)
-
-(*
 list_expr
     = '[' [expr {',' expr}] [','] ']'
 *)
@@ -144,6 +134,44 @@ let rec parse_list_expr p =
     in
     debug_out "parse_list_expr";
     res
+
+(*
+record_expr
+    = '{' {ID '=' expr sep} '}'
+*)
+and parse_record_expr p =
+    debug_in "parse_record_expr";
+    next_token p;
+    let pos = get_pos p in
+    let rec loop acc =
+        if token p = END then
+            List.rev acc
+        else begin
+            match token p with
+            | Id id ->
+                next_token p;
+                expect p EQ;
+                let e = parse_expr p in
+                if token p = SEMI then begin
+                    next_token p;
+                    skip_newline p;
+                    loop ((id, e)::acc)
+                end else
+                    List.rev ((id, e)::acc)
+            | tk -> error (get_pos p) @@ "syntax error at '" ^ s_token tk ^ "' (record_expr)"
+        end
+    in
+    let rl = loop [] in
+    expect p END;
+    let res = make_expr (ERecord rl) pos
+    in
+    debug_out "parse_record_expr";
+    res
+
+(*
+array_expr
+    = '[|' expr {',' expr} [','] '|]'
+*)
 
 (*
 simple_expr
@@ -209,6 +237,8 @@ and parse_simple_expr p =
                 expect p RPAR;
                 e
             end
+        | BEGIN ->
+            parse_record_expr p
         | tk -> error (get_pos p) @@ "syntax error at '" ^ s_token tk ^ "' (simple_expr)"
     in
     debug_out @@ "parse_simple_expr:" ^ s_expr res;
@@ -577,7 +607,15 @@ and parse_expr p =
     let res =
         match token p with
         | EOF -> make_expr EEof (get_pos p)
-        | SEMI | NEWLINE -> next_token p; parse_expr p
+        | SEMI | NEWLINE ->
+            next_token p;
+            parse_expr p
+        | DEDENT ->
+            next_token p;
+            skip_newline p;
+            expect p INDENT;
+            parse_expr p
+        | DECL -> parse_decl_def p
         | LET -> parse_let_expr p
         | IF -> parse_if_expr p
         | FN -> parse_fn_expr p
@@ -807,14 +845,18 @@ and parse_tyrep_record p =
     next_token p;
     skip_newline_indent p;
     let rec loop lst =
-        let rd = parse_field_decl p in
-        skip_newline p;
-        if token p <> NEWLINE && token p <> END && token p <> DEDENT then begin
-            skip_semi p;
+        if token p = END then
+            List.rev lst
+        else begin
+            let rd = parse_field_decl p in
             skip_newline p;
-            loop (rd::lst)
-        end else
-            List.rev (rd::lst)
+            if token p <> NEWLINE && token p <> END && token p <> DEDENT then begin
+                skip_semi p;
+                skip_newline p;
+                loop (rd::lst)
+            end else
+                List.rev (rd::lst)
+        end
     in
     let lst = loop [] in
     skip_newline_dedent p;
@@ -1039,6 +1081,7 @@ and parse_decl p =
         | MODULE -> parse_module p
         | IMPORT -> parse_import p
         | TYPE -> parse_type_def p
+        | DECL -> parse_decl_def p
         | EOF -> make_expr EEof (get_pos p)
         | Id _ -> parse_id_def false p
         | tk -> error (get_pos p) @@ "syntax error at '" ^ s_token tk ^ "' (decl)"

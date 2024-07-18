@@ -283,6 +283,7 @@ let rec s_value = function
     | VChar c -> String.make 1 c
     | VString s -> s
     | VModule _ -> "<module>"
+    | VType (TAlias (s,ty)) -> "<type " ^ s ^ "(" ^ s_typ ty ^ ")>"
     | VType ty -> "<type " ^ s_typ ty ^ ">"
     | (VCons (_,_)) as v -> "[" ^ (cons_to_string v) ^ "]"
     | VTuple vl -> "(" ^ s_list s_value ", " vl ^ ")"

@@ -1,4 +1,7 @@
 VRecordの実装
+  自分自身を参照する型がエラーになる
+  type tree = |Node int|Leaf (tree*tree)
+  みたいなやつ。
 
 VVariantの実装
 

@@ -358,6 +358,7 @@ let rec infer e =
         | (ERecord rl, _) ->
             debug_print "infer record";
             (*TODO 機械的にmapするのではなくて、メンバー名から推論したい*)
+            (*TODO is_mutable をどうするか*)
             TRecord (List.map (fun (s,e) -> (s, false, infer e)) rl) 
         | (ETuple el, _) ->
             debug_print "infer tuple";

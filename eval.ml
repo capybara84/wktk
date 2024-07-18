@@ -219,7 +219,8 @@ let rec eval e =
             in sym.v
         | (ERecord rl, _) ->
             debug_print @@ "eval record " ^ s_expr e;
-            VRecord [] (*TODO*)
+            (*TODO is_mutable をどうするか*)
+            VRecord (List.map (fun (s,e) -> (s, ref (eval e))) rl)
         | (ETuple el, _) ->
             debug_print @@ "eval tuple " ^ s_expr e;
             VTuple (List.map (fun x -> eval x) el)

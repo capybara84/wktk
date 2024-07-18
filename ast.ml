@@ -125,7 +125,7 @@ and value =
     | VTuple of value list
     | VClosure of expr * expr * env
     | VBuiltin of (pos -> expr -> value)
-    | VRecord of (string * bool * value ref) list
+    | VRecord of (string * value ref) list
 (*
     | VVariant of string * value option
 *)
@@ -315,7 +315,7 @@ let rec s_value = function
     | VTuple vl -> "(" ^ s_list s_value ", " vl ^ ")"
     | VClosure _ -> "<closure>"
     | VBuiltin _ -> "<builtin>"
-    | VRecord _ -> "<record>"
+    | VRecord rl -> "{" ^ s_list (fun (s,vr) -> s ^ "=" ^ s_value !vr) ";" rl ^ "}"
 and cons_to_string = function
     | VCons (x, VNil) -> s_value x
     | VCons (x, (VCons _ as xs)) -> (s_value x) ^ ", " ^ (cons_to_string xs)

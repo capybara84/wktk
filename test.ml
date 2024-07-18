@@ -466,7 +466,7 @@ let eval_test_data = [
     ("(1,2)", VTuple [VInt 1;VInt 2]);
     ("type Color = | Red | Green | Blue", VUnit);
     ("type Point2D = { x : int; y : int; }", VUnit);
-    ("let p = { x = 1; y = 2 } in p", VRecord [("x",false,{contents=VInt 1});("y",false,{contents=VInt 2})]);
+    ("let p = { x = 1; y = 2 } in p", VRecord [("x",{contents=VInt 1});("y",{contents=VInt 2})]);
 ]
 
 

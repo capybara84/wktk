@@ -610,7 +610,7 @@ and parse_expr p =
         | SEMI | NEWLINE ->
             next_token p;
             parse_expr p
-        | DEDENT ->
+        | DEDENT -> (* When using comment out, DEDENT occurs here, so delete it *)
             next_token p;
             skip_newline p;
             expect p INDENT;

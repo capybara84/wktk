@@ -488,11 +488,10 @@ let rec infer e =
             TUnit
         | (ETypeDecl (tvs, id, tyd), pos) ->
             debug_print @@ "type decl [" ^ s_list string_of_int "," tvs ^ "] " ^ id ^ " = " ^ s_typ_decl tyd;
-            (*TODO 前方参照に対応したい recみたいな*)
-            let ty = Eval.typ_from_decl pos id tyd in
-            let tys = generalize ty in
-            let tysym = { tys = tys; is_mutable = false } in
+            let tysym = { tys = generalize (new_tvar()); is_mutable = false } in
             Symbol.insert_tysym id tysym;
+            let ty = Eval.typ_from_decl pos id tyd in
+            tysym.tys <- generalize ty;
             TUnit
         | (EDecl (id, tye), pos) ->
             debug_print @@ "decl " ^ id ^ " : " ^ s_typ_expr tye;

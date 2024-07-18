@@ -60,9 +60,6 @@ let rec s_typ_raw ty =
 
 let get_pos x = (snd x)
 
-(*
-tvar は何にでもequal
-*)
 let rec equal t1 t2 =
     match (t1, t2) with
     | (TAlias (s1,_), TAlias (s2,_)) -> s1 = s2
@@ -106,6 +103,8 @@ and variant_equal = function
         else false
     | _ -> false
 
+let equals t tl = List.exists (fun t2 -> equal t t2) tl
+
 
 let reloc_tvar t =
     let seed = ref 0 in
@@ -145,62 +144,10 @@ let decl_equal t1 t2 =
     let t2' = reloc_tvar t2 in
     equal t1' t2'
 
-(*
-tvarは他と一致しない
-*)
-let rec is_type t1 t2 =
-    match (t1, t2) with
-    | (TAlias (s1,_), TAlias (s2,_)) -> s1 = s2
-    | (TConstr (t11,t12), TConstr (t21,t22)) -> is_type t11 t21 && is_type t12 t22
-    | (TList TChar, TString) | (TString, TList TChar) -> true
-    | (TList t1, TList t2) -> is_type t1 t2
-    | (TTuple tl1, TTuple tl2) -> list_is_type (tl1, tl2)
-    | (TFun (t11,t12), TFun (t21,t22)) -> is_type t11 t21 && is_type t12 t22
-    | (TVar (_, {contents=Some t1'}), _) -> is_type t1' t2
-    | (_, TVar (_, {contents=Some t2'})) -> is_type t1 t2'
-    | (TRecord rl1, TRecord rl2) -> record_is_type (rl1, rl2)
-    | (TVariant vl1, TVariant vl2) -> variant_is_type (vl1, vl2)
-    | _ when t1 = t2 -> true
-    | _ -> false
-and list_is_type = function
-    | ([], []) -> true
-    | (_, []) | ([], _) -> false
-    | (x::xs, y::ys) ->
-        if is_type x y then
-            list_is_type (xs, ys)
-        else false
-and record_is_type = function
-    | ([], []) -> true
-    | (_, []) | ([], _) -> false
-    | ((s1,b1,t1)::xs, (s2,b2,t2)::ys) ->
-        if s1 = s2 && b1 = b2 && is_type t1 t2 then
-            record_is_type (xs, ys)
-        else false
-and variant_is_type = function
-    | ([], []) -> true
-    | (_, []) | ([], _) -> false
-    | ((s1, None)::xs, (s2, None)::ys) ->
-        if s1 = s2 then
-            variant_is_type (xs, ys)
-        else false
-    | ((s1, Some t1)::xs, (s2, Some t2)::ys) ->
-        if s1 = s2 && is_type t1 t2 then
-            variant_is_type (xs, ys)
-        else false
-    | _ -> false
-
-
-let is_type_in t tl = List.exists (fun t2 -> is_type t t2) tl
-
 let rec is_list = function
     | TList _ -> true
     | TAlias (_, t) -> is_list t
     | TVar (_, {contents=Some t}) -> is_list t
-    | _ -> false
-
-let rec is_tvar = function
-    | TVar _ -> true
-    | TAlias (_, t) -> is_tvar t
     | _ -> false
 
 let rec type_var_equal t1 t2 =
@@ -331,27 +278,30 @@ let instantiate tys =
 let infer_unary op t pos =
     match op with
     | UNot ->
-        if is_type t TBool then TBool
-        else error pos @@ "This expression has type " ^ s_typ t ^
-            " but an expression was expected of type int"
+        unify t TBool pos;
+        TBool
     | UMinus ->
-        if is_type t TInt then TInt
-        else if is_type t TFloat then TFloat
+        if equals t [TInt;TFloat] then t
         else error pos @@ "This expression has type " ^ s_typ t ^
             " but an expression was expected of type int/float"
 
 let infer_binary op tl tr pos =
     match op with
-    | BinAdd | BinSub | BinMul | BinDiv | BinMod ->
+    | BinAdd ->
         unify tl tr pos;
-        if is_type_in tl [TInt;TFloat;TString] || is_tvar tl || is_list tl then tl
+        if equals tl [TInt;TFloat;TString] || is_list tl then tl
         else
             error pos @@ "The expression has type " ^ s_typ tl ^
                         " but an expression was expected of type int/float/string/list"
+    | BinSub | BinMul | BinDiv | BinMod ->
+        unify tl tr pos;
+        if equals tl [TInt;TFloat] then tl
+        else
+            error pos @@ "The expression has type " ^ s_typ tl ^
+                        " but an expression was expected of type int/float"
     | BinLT | BinLE | BinGT | BinGE ->
         unify tl tr pos;
-        if is_type_in tl [TChar;TInt;TFloat;TString;TList TChar]
-            || is_tvar tl then TBool
+        if equals tl [TChar;TInt;TFloat;TString;TList TChar] then TBool
         else error pos @@ "The expression has type " ^ s_typ tl ^
                         " but an expression was expected of type char/int/float/string/list"
     | BinEq | BinNeq | BinEql | BinNeql ->
@@ -562,7 +512,7 @@ and infer_list = function
     | x::[] -> infer x
     | x::xs ->
         let t = infer x in
-        if not (is_type t TUnit) then
+        if t <> TUnit then
             error (get_pos x) @@ "expression should have type unit (at '" ^ s_typ_raw t ^ "')";
         infer_list xs
 

@@ -124,6 +124,10 @@ and value =
     | VTuple of value list
     | VClosure of expr * expr * env
     | VBuiltin of (pos -> expr -> value)
+(*
+    | VRecord of (string * bool * ref value) list
+    | VVariant of string * value option
+*)
 and
     symbol = {
         mutable v : value;
@@ -282,8 +286,17 @@ and s_typ_expr tye =
 
 and s_typ_decl = function
     | TD_Alias tye -> s_typ_expr tye
-    | TD_Record _ -> "record" (*TODO*)
-    | TD_Variant _ -> "variant" (*TODO*)
+    | TD_Record rl ->
+        "{" ^ s_list
+            (fun (s,b,t) -> (if b then "mut " else "") ^ s ^ ":" ^ s_typ_expr t)
+            ";" rl ^ "}"
+    | TD_Variant vl ->
+        "|" ^ s_list
+            (fun (s, ot) ->
+                match ot with
+                | None -> s
+                | Some t -> s ^ " " ^ s_typ_expr t)
+            "|" vl
 
 let rec s_value = function
     | VUnit -> "()"
@@ -295,7 +308,6 @@ let rec s_value = function
     | VChar c -> String.make 1 c
     | VString s -> s
     | VModule _ -> "<module>"
-    | VType (TAlias (s,ty)) -> "<type " ^ s ^ "(" ^ s_typ ty ^ ")>"
     | VType ty -> "<type " ^ s_typ ty ^ ">"
     | (VCons (_,_)) as v -> "[" ^ (cons_to_string v) ^ "]"
     | VTuple vl -> "(" ^ s_list s_value ", " vl ^ ")"

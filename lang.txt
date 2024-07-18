@@ -103,6 +103,25 @@ record_expr
     = '{' {ID '=' expr sep} '}'
 
 ----
+module Graphics2D
+type 'a pt = {
+    x : 'a
+    y : 'a
+}
+get_x p = p.x
+get_y p = p.y
+
+module Graphics3D
+type 'a pt = {
+    x : 'a
+    y : 'a
+    z : 'a
+}
+get_x p = p.x
+get_y p = p.y
+get_z p = p.z
+
+----
 
 qsort : 'a list -> 'a list
 qsort lst =

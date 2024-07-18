@@ -356,6 +356,8 @@ let type_test_data = [
 
     ("decl len : 'a list -> int", "unit");
     ("let len x = if x = [] then 0 else 1 + len (List.tl x) in len [1,2,3]", "int");
+
+    ("fn x -> !x", "bool -> bool");
 ]
 
 let type_test () =

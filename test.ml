@@ -441,7 +441,7 @@ let eval_test_data = [
     ("let x = 1 in x", (VInt 1));
     ("let f = fn () -> 5 in f ()", VInt 5);
     ("let g = fn _ -> 8 in g 3", VInt 8);
-    ("let a = fn x -> x + 1 in a 4", VInt 5);
+    ("let b = fn x -> x + 1 in b 4", VInt 5);
     ("let add = fn x -> fn y -> x + y in add 1 2", VInt 3);
     ("let add = fn x -> fn y -> x + y in let add5 = add 5 in add5 3", VInt 8);
     ("let foo = fn x -> x + 2 in foo 4", VInt 6);

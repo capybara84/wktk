@@ -1,11 +1,13 @@
-型表示するとき、TAliasの場合は実体も表示したい
+
+*型表示するとき、TAliasの場合は実体も表示したい
+ -> やってみたけど、あまり意味なかった。元にもどそうかな。
 
 *TD_Alias は間違っていないんだけど、
  定義後は名前で扱ってほしいのだが展開されちゃう。
  そらそうか。名前で扱う必要がある。
  TAlias of string * typ
  を作ってみたけど、、どこでTAliasを使えばいいのか
- TAlias対応してみた。
+ *->TAlias対応してみた。
  
 
 *現時点で、
@@ -13,11 +15,12 @@
  length : 'a ll
  length x = if x = [] then 0 else 1 + length (List.tl x)
  が型エラーになる
- 名前が違うのでエラーでいいのか。
+ *->名前が違うのでエラーでいいのか。
 
 
-typ_expr と typ_decl をinferする時に、typ に変換して、
-以降はtypで扱う、ってのがいいかなと思う。
+*typ_expr と typ_decl をinferする時に、typ に変換して、
+ 以降はtypで扱う、ってのがいいかなと思う。
+ ->実装してみた
 
 *type ETypeDefとかEDecl の引数をtyp_symにしているが、typ_schemeかtypでいいのでは？
     -> typ_expr と typ_decl にした。
@@ -36,6 +39,9 @@ typ_expr と typ_decl をinferする時に、typ に変換して、
     いちおうできた
 
 record
+    *型宣言はできた
+variant
+    *型宣言はできた
 
 mutable の扱いを今はis_mutableにしているが、record { mutable contents } にしたい
 assignの型チェック

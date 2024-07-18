@@ -32,7 +32,7 @@ let rec s_typ_raw ty =
             | TConstr (t1, t2) ->
                 let s1 = to_s 1 t1 in
                 let s2 = to_s 0 t2 in
-                (1, s1 ^ " " ^ s2)
+                (3, s1 ^ " " ^ s2)
             | TList t -> (3, to_s 0 t ^ " list")
             | TTuple tl -> (3, s_list (to_s 4) " * " tl)
             | TFun (t1, t2) ->
@@ -43,6 +43,16 @@ let rec s_typ_raw ty =
                 (5, "'" ^ string_of_int x)
             | TVar (_, {contents=Some t}) ->
                 (3, "<" ^ to_s n t ^ ">")
+            | TRecord rl ->
+                (3, "{" ^ s_list (fun (s,b,t) ->
+                        (if b then "mut " else "") ^ s ^ ":" ^ to_s 0 t)
+                        ";" rl ^ "}")
+            | TVariant vl ->
+                (3, "|" ^ s_list (fun (s, ot) ->
+                        match ot with
+                        | None -> s
+                        | Some t -> s ^ " " ^ to_s 0 t)
+                        "|" vl)
         in
         if m > n then str
         else "(" ^ str ^ ")"
@@ -50,10 +60,11 @@ let rec s_typ_raw ty =
 
 let get_pos x = (snd x)
 
-
+(*
+tvar は何にでもequal
+*)
 let rec equal t1 t2 =
     match (t1, t2) with
-    | (a, b) when a == b -> true
     | (TAlias (s1,_), TAlias (s2,_)) -> s1 = s2
     | (TConstr (t11, t12), TConstr (t21, t22)) -> equal t11 t21 && equal t12 t22
     | (TList TChar, TString) | (TString, TList TChar) -> true
@@ -64,6 +75,9 @@ let rec equal t1 t2 =
     | (TVar (_, {contents=None}), _) | (_, TVar (_, {contents=None})) -> true
     | (TVar (_, {contents=Some t1'}), _) -> equal t1' t2
     | (_, TVar (_, {contents=Some t2'})) -> equal t1 t2'
+    | (TRecord rl1, TRecord rl2) -> record_equal (rl1, rl2)
+    | (TVariant vl1, TVariant vl2) -> variant_equal (vl1, vl2)
+    | _ when t1 = t2 -> true
     | _ -> false
 and list_equal = function
     | ([], []) -> true
@@ -72,6 +86,26 @@ and list_equal = function
         if equal x y then
             list_equal (xs, ys)
         else false
+and record_equal = function
+    | ([], []) -> true
+    | (_, []) | ([], _) -> false
+    | ((s1,b1,t1)::xs, (s2,b2,t2)::ys) ->
+        if s1 = s2 && b1 = b2 && equal t1 t2 then
+            record_equal (xs, ys)
+        else false
+and variant_equal = function
+    | ([], []) -> true
+    | (_, []) | ([], _) -> false
+    | ((s1, None)::xs, (s2, None)::ys) ->
+        if s1 = s2 then
+            variant_equal (xs, ys)
+        else false
+    | ((s1, Some t1)::xs, (s2, Some t2)::ys) ->
+        if s1 = s2 && equal t1 t2 then
+            variant_equal (xs, ys)
+        else false
+    | _ -> false
+
 
 let reloc_tvar t =
     let seed = ref 0 in
@@ -98,6 +132,11 @@ let reloc_tvar t =
                 mappings := (n, ty) :: !mappings;
                 ty
             end)
+        | TRecord rl -> TRecord (List.map (fun (s,b,t) -> (s,b, conv t)) rl)
+        | TVariant vl -> TVariant (List.map (fun (s,ot) ->
+                                        (s, match ot with
+                                                | None -> None
+                                                | Some t -> Some (conv t))) vl)
     in
     conv t
 
@@ -106,16 +145,21 @@ let decl_equal t1 t2 =
     let t2' = reloc_tvar t2 in
     equal t1' t2'
 
+(*
+tvarは他と一致しない
+*)
 let rec is_type t1 t2 =
     match (t1, t2) with
     | (TAlias (s1,_), TAlias (s2,_)) -> s1 = s2
-    | (TVar (_, {contents=Some t1'}), _) -> is_type t1' t2
-    | (_, TVar (_, {contents=Some t2'})) -> is_type t1 t2'
     | (TConstr (t11,t12), TConstr (t21,t22)) -> is_type t11 t21 && is_type t12 t22
     | (TList TChar, TString) | (TString, TList TChar) -> true
     | (TList t1, TList t2) -> is_type t1 t2
     | (TTuple tl1, TTuple tl2) -> list_is_type (tl1, tl2)
     | (TFun (t11,t12), TFun (t21,t22)) -> is_type t11 t21 && is_type t12 t22
+    | (TVar (_, {contents=Some t1'}), _) -> is_type t1' t2
+    | (_, TVar (_, {contents=Some t2'})) -> is_type t1 t2'
+    | (TRecord rl1, TRecord rl2) -> record_is_type (rl1, rl2)
+    | (TVariant vl1, TVariant vl2) -> variant_is_type (vl1, vl2)
     | _ when t1 = t2 -> true
     | _ -> false
 and list_is_type = function
@@ -125,6 +169,26 @@ and list_is_type = function
         if is_type x y then
             list_is_type (xs, ys)
         else false
+and record_is_type = function
+    | ([], []) -> true
+    | (_, []) | ([], _) -> false
+    | ((s1,b1,t1)::xs, (s2,b2,t2)::ys) ->
+        if s1 = s2 && b1 = b2 && is_type t1 t2 then
+            record_is_type (xs, ys)
+        else false
+and variant_is_type = function
+    | ([], []) -> true
+    | (_, []) | ([], _) -> false
+    | ((s1, None)::xs, (s2, None)::ys) ->
+        if s1 = s2 then
+            variant_is_type (xs, ys)
+        else false
+    | ((s1, Some t1)::xs, (s2, Some t2)::ys) ->
+        if s1 = s2 && is_type t1 t2 then
+            variant_is_type (xs, ys)
+        else false
+    | _ -> false
+
 
 let is_type_in t tl = List.exists (fun t2 -> is_type t t2) tl
 
@@ -157,6 +221,15 @@ let rec occurs_in_type t t2 =
         | TTuple tl -> occurs_in t tl
         | TConstr (tf1, tf2) -> occurs_in t [tf1;tf2]
         | TFun (tf1, tf2) -> occurs_in t [tf1;tf2]
+        | TRecord rl -> occurs_in t (List.map (fun (_,_,t) -> t) rl)
+        | TVariant vl -> 
+            List.fold_left
+                (fun b (_,ot) ->
+                    (match ot with
+                    | None -> b && true
+                    | Some t2 -> b)
+                    && occurs_in_type t t2)
+                true vl
         | _ -> false
 
 and occurs_in t types =
@@ -200,6 +273,14 @@ let rec unify t1 t2 pos =
             debug_print @@ "... " ^ s_typ_raw t2
         end
     | (TAlias (s1,_), TAlias (s2,_)) when s1=s2 -> ()
+    | (TRecord rl1, TRecord rl2) when List.length rl1 = List.length rl2 ->
+        List.iter2 (fun (_,_,x) (_,_,y) -> unify x y pos) rl1 rl2
+    | (TVariant vl1, TVariant vl2) when List.length vl1 = List.length vl2 ->
+        List.iter2 (fun (s1,ot1) (s2,ot2) ->
+            match ot1,ot2 with
+            | None,None -> ()
+            | Some t1, Some t2 -> unify t1 t2 pos
+            | _ -> error pos @@ "type mismatch between " ^ s1 ^ " and " ^ s2) vl1 vl2
     | (_, _) -> error pos @@ "type mismatch between " ^ s_typ t2 ^ " and " ^ s_typ t1);
     debug_out @@ "unify"
 
@@ -212,6 +293,12 @@ let rec free_tyvars = function
     | TFun (t1, t2) -> free_tyvars t1 @ free_tyvars t2
     | TVar (x, {contents=None}) -> [x]
     | TVar (_, {contents=Some t}) -> free_tyvars t
+    | TRecord rl -> List.fold_left (fun fvs (_,_,x) -> fvs @ free_tyvars x) [] rl
+    | TVariant vl -> List.fold_left (fun fvs (_,ot) ->
+                            match ot with
+                            | None -> fvs
+                            | Some t -> fvs @ free_tyvars t)
+                            [] vl
     | _ -> []
 
 let generalize ty =
@@ -230,6 +317,11 @@ let rec substitute subst = function
     | TFun (t1, t2) -> TFun (substitute subst t1, substitute subst t2)
     | TVar (x, {contents=None}) as t -> (try List.assoc x subst with Not_found -> t)
     | TVar (_, {contents=Some t}) -> substitute subst t
+    | TRecord rl -> TRecord (List.map (fun (s,b,t) -> (s,b, substitute subst t)) rl)
+    | TVariant vl -> TVariant (List.map (fun (s,ot) ->
+                                    (s, match ot with
+                                            | None -> None
+                                            | Some t -> Some (substitute subst t))) vl)
     | t -> t
 
 let instantiate tys =

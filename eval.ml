@@ -51,9 +51,11 @@ let rec typ_from_expr pos = function
 
 let rec typ_from_decl pos id = function
     | TD_Alias e -> TAlias (id, typ_from_expr pos e)
-    | TD_Record _ -> (*TODO*) failwith "TD_Record TODO"
-    | TD_Variant _ -> (*TODO*) failwith "TD_Variant TODO"
-
+    | TD_Record rl -> TAlias (id, TRecord (List.map (fun (s,b,e) -> (s,b, typ_from_expr pos e)) rl))
+    | TD_Variant vl -> TAlias (id, TVariant (List.map (fun (s, oe) -> (s,
+                                    match oe with
+                                    | None -> None
+                                    | Some e -> Some (typ_from_expr pos e))) vl))
 
 
 let rec cons_append x y =

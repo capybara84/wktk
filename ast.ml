@@ -52,6 +52,8 @@ type typ =
     | TTuple of typ list
     | TFun of typ * typ
     | TVar of int * typ option ref
+    | TRecord of (string * bool * typ) list
+    | TVariant of (string * typ option) list
 and
     typ_scheme = {
         vars : int list;
@@ -183,7 +185,7 @@ let rec s_typ ty =
             | TConstr (t1, t2) ->
                 let s1 = to_s 1 t1 in
                 let s2 = to_s 0 t2 in
-                (1, s1 ^ " " ^ s2)
+                (3, s1 ^ " " ^ s2)
             | TList t -> (3, to_s 0 t ^ " list")
             | TTuple tl -> (3, "(" ^ s_list (to_s 4) " * " tl ^ ")")
             | TFun (t1, t2) ->
@@ -200,6 +202,16 @@ let rec s_typ ty =
                 in (5, "'" ^ int_to_alpha y)
             | TVar (_, {contents=Some t}) ->
                 (3, to_s n t)
+            | TRecord rl ->
+                (3, "{" ^ s_list (fun (s,b,t) ->
+                        (if b then "mut " else "") ^ s ^ ":" ^ to_s 0 t)
+                        ";" rl ^ "}")
+            | TVariant vl ->
+                (3, "|" ^ s_list (fun (s, ot) ->
+                        match ot with
+                        | None -> s
+                        | Some t -> s ^ " " ^ to_s 0 t)
+                        "|" vl)
         in
         if m > n then str
         else "(" ^ str ^ ")"

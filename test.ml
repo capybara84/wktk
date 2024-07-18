@@ -253,6 +253,7 @@ let parser_test_data = [
         "(ETypeDecl ([], \"point3d\", (TD_Record [(\"x\", true, (TE_Name \"float\"));(\"y\", true, (TE_Name \"float\"));(\"z\", true, (TE_Name \"float\"))])))");
     ("type 'a ll = 'a list", "(ETypeDecl ([0], \"ll\", (TD_Alias (TE_Constr ((TE_Var 0), (TE_Name \"list\"))))))");
     ("decl len : 'a ll -> int", "(EDecl (\"len\", (TE_Fun ((TE_Constr ((TE_Var 0), (TE_Name \"ll\"))), (TE_Name \"int\")))))");
+    ("type Bool = | False | True", "(ETypeDecl ([], \"Bool\", (TD_Variant [(\"False\", None);(\"True\", None)])))");
 ]
 
 let parser_test () =
@@ -344,20 +345,17 @@ let type_test_data = [
     ("fn b -> fn f -> let g1 = fn x -> x f in let g2 = fn x -> x f in fn z -> if b then g1 z g2 else g2 z g1", "bool -> 'a -> ('a -> (('a -> 'b) -> 'b) -> 'c) -> 'c");
 *)
 
-(*
-    ("type 'a ll = 'a list", "unit");
-    ("decl a : int ll", "unit");
-    ("a", "int ll");
-*)
 
     ("type integer = int", "unit");
-    ("decl a : integer", "unit");
-    ("a", "integer");
+    ("decl d : integer", "unit");
+    ("d", "integer");
 
-(*
-    ("decl len : 'a ll -> int", "unit");
+    ("type 'a ll = 'a list", "unit");
+    ("decl c : int ll", "unit");
+    ("c", "int ll");
+
+    ("decl len : 'a list -> int", "unit");
     ("let len x = if x = [] then 0 else 1 + len (List.tl x) in len [1,2,3]", "int");
-*)
 ]
 
 let type_test () =
@@ -458,6 +456,7 @@ let eval_test_data = [
     ("type 'a pair = 'a * 'a ", VUnit);
     ("decl a : int pair", VUnit);
     ("(1,2)", VTuple [VInt 1;VInt 2]);
+    ("type Color = | Red | Green | Blue", VUnit);
 ]
 
 

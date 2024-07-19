@@ -1,0 +1,18 @@
+
+type Color = | Red | Green | Blue
+
+//print_color : Color -> unit
+print_color c =
+    if c = Red then
+        prn "RED"
+    else if c = Green then
+        prn "GREEN"
+    else if c = Blue then
+        prn "BLUE"
+    else
+        prn "RGB"
+
+_ =
+    print_color Green
+    print_color Red
+    print_color Blue

@@ -1,15 +1,17 @@
-*VRecordの実装
-  自分自身を参照する型がエラーになる
-  type tree = |Node int|Leaf (tree*tree)
-  みたいなやつ。
-  *-> 対応した
 
 VVariantの実装
  途中までやってみたが、色々とイマイチ
  TVariant (string,typ option) list の typ optionのとことか。
  TAlias にすべきか、TVariantやTRecord自体に名前をもたすか。
+ とりあえず適当にtyp optionをTODOにして実装してみた。
+ 動いているけどイマイチ。
 
 
+*VRecordの実装
+  自分自身を参照する型がエラーになる
+  type tree = |Node int|Leaf (tree*tree)
+  みたいなやつ。
+  *-> 対応した
 
 *Type.equal と Type.is_type の違い
  もしかしてis_typeはいらないのでは？

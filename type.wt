@@ -27,5 +27,5 @@ type color = | Red | Green | Blue | RGB (int * int * int)
 type 'a option = | None | Some 'a
 type 'a tree = | Node 'a | Leaf ('a tree * 'a tree)
 type ITree = int tree
-type list = List.t
+//type list = List.t
 

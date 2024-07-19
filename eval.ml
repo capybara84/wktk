@@ -57,6 +57,49 @@ let rec typ_from_decl pos id = function
                                     | None -> None
                                     | Some e -> Some (typ_from_expr pos e))) vl))
 
+let rec typ_equal t1 t2 =
+    match (t1, t2) with
+    | (TAlias (s1,_), TAlias (s2,_)) -> s1 = s2
+    | (TConstr (t11, t12), TConstr (t21, t22)) -> typ_equal t11 t21 && typ_equal t12 t22
+    | (TList TChar, TString) | (TString, TList TChar) -> true
+    | (TList t1, TList t2) -> typ_equal t1 t2
+    | (TTuple tl1, TTuple tl2) -> list_equal (tl1, tl2)
+    | (TFun (t11, t12), TFun (t21, t22)) -> typ_equal t11 t21 && typ_equal t12 t22
+    | (TVar (n, {contents=None}), TVar (m, {contents=None})) -> n = m
+    | (TVar (_, {contents=None}), _) | (_, TVar (_, {contents=None})) -> true
+    | (TVar (_, {contents=Some t1'}), _) -> typ_equal t1' t2
+    | (_, TVar (_, {contents=Some t2'})) -> typ_equal t1 t2'
+    | (TRecord rl1, TRecord rl2) -> record_equal (rl1, rl2)
+    | (TVariant vl1, TVariant vl2) -> variant_equal (vl1, vl2)
+    | _ when t1 = t2 -> true
+    | _ -> false
+and list_equal = function
+    | ([], []) -> true
+    | (_, []) | ([], _) -> false
+    | (x::xs, y::ys) ->
+        if typ_equal x y then
+            list_equal (xs, ys)
+        else false
+and record_equal = function
+    | ([], []) -> true
+    | (_, []) | ([], _) -> false
+    | ((s1,b1,t1)::xs, (s2,b2,t2)::ys) ->
+        if s1 = s2 && b1 = b2 && typ_equal t1 t2 then
+            record_equal (xs, ys)
+        else false
+and variant_equal = function
+    | ([], []) -> true
+    | (_, []) | ([], _) -> false
+    | ((s1, None)::xs, (s2, None)::ys) ->
+        if s1 = s2 then
+            variant_equal (xs, ys)
+        else false
+    | ((s1, Some t1)::xs, (s2, Some t2)::ys) ->
+        if s1 = s2 && typ_equal t1 t2 then
+            variant_equal (xs, ys)
+        else false
+    | _ -> false
+
 
 let rec cons_append x y =
     match x with
@@ -92,7 +135,7 @@ let rec eval_add pos = function
     | (VNil, (VCons _ as r)) -> r
     | (VCons _ as l, (VCons _ as r)) -> cons_append l r
     | (l,r) ->
-        print_endline @@ "l=" ^ s_value l ^ ", r=" ^ s_value r;
+print_endline @@ "l=" ^ s_value l ^ ", r=" ^ s_value r;
         error pos "type error (binary add)"
 
 let rec eval_shallow_equal pos = function
@@ -108,6 +151,7 @@ let rec eval_shallow_equal pos = function
     | (VString "", VNil) | (VNil, VString "") -> false
     | (VString _, VNil) | (VNil, VString _) -> false
     | (VTuple xl, VTuple yl) -> shallow_equal_tuple pos (xl, yl)
+    | (VVariant (s1,ov1), VVariant (s2,ov2)) -> s1 = s2 (*TODO ov1 ov2 *)
     | (lhs, rhs) -> error pos @@ "type error (shallow equal) " ^ s_value lhs ^ " & " ^ s_value rhs
 and shallow_equal_tuple pos = function
     | ([], []) -> true
@@ -130,7 +174,10 @@ let rec eval_deep_equal pos = function
     | (VString "", VNil) | (VNil, VString "") -> true
     | (VString _, VNil) | (VNil, VString _) -> false
     | (VTuple xl, VTuple yl) -> deep_equal_tuple pos (xl, yl)
+    | (VType ty1, VType ty2) -> typ_equal ty1 ty2
+    | (VVariant (s1,ov1), VVariant (s2,ov2)) -> s1 = s2 (*TODO ov1 ov2 *)
     | (lhs, rhs) -> error pos @@ "type error (deep equal) " ^ s_value lhs ^ " & " ^ s_value rhs
+
 and deep_equal_tuple pos = function
     | ([], []) -> true
     | (_, []) | ([], _) -> false
@@ -351,6 +398,13 @@ let rec eval e =
             let ty = typ_from_decl pos id tyd in
             let sym = { v = VType ty; is_mutable = false } in
             Symbol.insert_sym id sym;
+            (match ty with
+            | TAlias (_, TVariant vl) ->    (*TODO alias が美しくない *)
+                List.iter (fun (id, oty) -> (*TODO otyを使っていない *)
+                            let sym = { v = VVariant (id, None (*TODO*) ); is_mutable = false } in
+                            Symbol.insert_sym id sym
+                            ) vl
+            | _ -> ());
             VUnit
         | (EDecl (id, tye), _) ->
             debug_print @@ "decl " ^ id ^ " : " ^ s_typ_expr tye;

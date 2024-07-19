@@ -60,50 +60,7 @@ let rec s_typ_raw ty =
 
 let get_pos x = (snd x)
 
-let rec equal t1 t2 =
-    match (t1, t2) with
-    | (TAlias (s1,_), TAlias (s2,_)) -> s1 = s2
-    | (TConstr (t11, t12), TConstr (t21, t22)) -> equal t11 t21 && equal t12 t22
-    | (TList TChar, TString) | (TString, TList TChar) -> true
-    | (TList t1, TList t2) -> equal t1 t2
-    | (TTuple tl1, TTuple tl2) -> list_equal (tl1, tl2)
-    | (TFun (t11, t12), TFun (t21, t22)) -> equal t11 t21 && equal t12 t22
-    | (TVar (n, {contents=None}), TVar (m, {contents=None})) -> n = m
-    | (TVar (_, {contents=None}), _) | (_, TVar (_, {contents=None})) -> true
-    | (TVar (_, {contents=Some t1'}), _) -> equal t1' t2
-    | (_, TVar (_, {contents=Some t2'})) -> equal t1 t2'
-    | (TRecord rl1, TRecord rl2) -> record_equal (rl1, rl2)
-    | (TVariant vl1, TVariant vl2) -> variant_equal (vl1, vl2)
-    | _ when t1 = t2 -> true
-    | _ -> false
-and list_equal = function
-    | ([], []) -> true
-    | (_, []) | ([], _) -> false
-    | (x::xs, y::ys) ->
-        if equal x y then
-            list_equal (xs, ys)
-        else false
-and record_equal = function
-    | ([], []) -> true
-    | (_, []) | ([], _) -> false
-    | ((s1,b1,t1)::xs, (s2,b2,t2)::ys) ->
-        if s1 = s2 && b1 = b2 && equal t1 t2 then
-            record_equal (xs, ys)
-        else false
-and variant_equal = function
-    | ([], []) -> true
-    | (_, []) | ([], _) -> false
-    | ((s1, None)::xs, (s2, None)::ys) ->
-        if s1 = s2 then
-            variant_equal (xs, ys)
-        else false
-    | ((s1, Some t1)::xs, (s2, Some t2)::ys) ->
-        if s1 = s2 && equal t1 t2 then
-            variant_equal (xs, ys)
-        else false
-    | _ -> false
-
-let equals t tl = List.exists (fun t2 -> equal t t2) tl
+let equals t tl = List.exists (fun t2 -> Eval.typ_equal t t2) tl
 
 
 let reloc_tvar t =
@@ -142,7 +99,7 @@ let reloc_tvar t =
 let decl_equal t1 t2 =
     let t1' = reloc_tvar t1 in
     let t2' = reloc_tvar t2 in
-    equal t1' t2'
+    Eval.typ_equal t1' t2'
 
 let rec is_list = function
     | TList _ -> true
@@ -173,10 +130,9 @@ let rec occurs_in_type t t2 =
             List.fold_left
                 (fun b (_,ot) ->
                     (match ot with
-                    | None -> b && true
-                    | Some t2 -> b)
-                    && occurs_in_type t t2)
-                true vl
+                    | None -> b
+                    | Some t2 -> b || occurs_in_type t t2))
+                false vl
         | _ -> false
 
 and occurs_in t types =
@@ -492,6 +448,14 @@ let rec infer e =
             Symbol.insert_tysym id tysym;
             let ty = Eval.typ_from_decl pos id tyd in
             tysym.tys <- generalize ty;
+            (match ty with
+            | TAlias (_, TVariant vl) ->    (*TODO alias が美しくない *)
+                List.iter (fun (id, oty) ->
+                            let tysym = { tys = make_typ_scheme [] (TVariant vl);
+                                is_mutable = false } in
+                            Symbol.insert_tysym id tysym
+                            ) vl
+            | _ -> ());
             TUnit
         | (EDecl (id, tye), pos) ->
             debug_print @@ "decl " ^ id ^ " : " ^ s_typ_expr tye;
@@ -517,7 +481,11 @@ and infer_list = function
     | x::[] -> infer x
     | x::xs ->
         let t = infer x in
-        if t <> TUnit then
+        let rec peel_off = function
+            | TVar (_, {contents = Some t}) -> t
+            | x -> x
+        in
+        if peel_off t <> TUnit then
             error (get_pos x) @@ "expression should have type unit (at '" ^ s_typ_raw t ^ "')";
         infer_list xs
 

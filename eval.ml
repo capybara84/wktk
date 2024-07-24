@@ -52,10 +52,10 @@ let rec typ_from_expr pos = function
 let rec typ_from_decl pos id = function
     | TD_Alias e -> TAlias (id, typ_from_expr pos e)
     | TD_Record rl -> TAlias (id, TRecord (List.map (fun (s,b,e) -> (s,b, typ_from_expr pos e)) rl))
-    | TD_Variant vl -> TAlias (id, TVariant (List.map (fun (s, oe) -> (s,
+    | TD_Variant vl -> TVariant (id, List.map (fun (s, oe) -> (s,
                                     match oe with
                                     | None -> None
-                                    | Some e -> Some (typ_from_expr pos e))) vl))
+                                    | Some e -> Some (typ_from_expr pos e))) vl)
 
 let rec typ_equal t1 t2 =
     match (t1, t2) with
@@ -70,7 +70,10 @@ let rec typ_equal t1 t2 =
     | (TVar (_, {contents=Some t1'}), _) -> typ_equal t1' t2
     | (_, TVar (_, {contents=Some t2'})) -> typ_equal t1 t2'
     | (TRecord rl1, TRecord rl2) -> record_equal (rl1, rl2)
+    | (TVariant (s1,_), TVariant (s2,_)) -> s1 = s2
+    (*
     | (TVariant vl1, TVariant vl2) -> variant_equal (vl1, vl2)
+    *)
     | _ when t1 = t2 -> true
     | _ -> false
 and list_equal = function
@@ -87,6 +90,7 @@ and record_equal = function
         if s1 = s2 && b1 = b2 && typ_equal t1 t2 then
             record_equal (xs, ys)
         else false
+(*
 and variant_equal = function
     | ([], []) -> true
     | (_, []) | ([], _) -> false
@@ -99,7 +103,7 @@ and variant_equal = function
             variant_equal (xs, ys)
         else false
     | _ -> false
-
+*)
 
 let rec cons_append x y =
     match x with
@@ -399,10 +403,10 @@ let rec eval e =
             let sym = { v = VType ty; is_mutable = false } in
             Symbol.insert_sym id sym;
             (match ty with
-            | TAlias (_, TVariant vl) ->    (*TODO alias が美しくない *)
-                List.iter (fun (id, oty) -> (*TODO otyを使っていない *)
-                            let sym = { v = VVariant (id, None (*TODO*) ); is_mutable = false } in
-                            Symbol.insert_sym id sym
+            | TVariant (_, vl) ->
+                List.iter (fun (s, oty) -> (*TODO otyを使っていない *)
+                            let sym = { v = VVariant (s, None (*TODO*) ); is_mutable = false } in
+                            Symbol.insert_sym s sym
                             ) vl
             | _ -> ());
             VUnit

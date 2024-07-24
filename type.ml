@@ -47,8 +47,8 @@ let rec s_typ_raw ty =
                 (3, "{" ^ s_list (fun (s,b,t) ->
                         (if b then "mut " else "") ^ s ^ ":" ^ to_s 0 t)
                         ";" rl ^ "}")
-            | TVariant vl ->
-                (3, "|" ^ s_list (fun (s, ot) ->
+            | TVariant (s,vl) ->
+                (3, s ^ " |" ^ s_list (fun (s, ot) ->
                         match ot with
                         | None -> s
                         | Some t -> s ^ " " ^ to_s 0 t)
@@ -89,7 +89,7 @@ let reloc_tvar t =
                 ty
             end)
         | TRecord rl -> TRecord (List.map (fun (s,b,t) -> (s,b, conv t)) rl)
-        | TVariant vl -> TVariant (List.map (fun (s,ot) ->
+        | TVariant (id, vl) -> TVariant (id, List.map (fun (s,ot) ->
                                         (s, match ot with
                                                 | None -> None
                                                 | Some t -> Some (conv t))) vl)
@@ -126,7 +126,7 @@ let rec occurs_in_type t t2 =
         | TConstr (tf1, tf2) -> occurs_in t [tf1;tf2]
         | TFun (tf1, tf2) -> occurs_in t [tf1;tf2]
         | TRecord rl -> occurs_in t (List.map (fun (_,_,t) -> t) rl)
-        | TVariant vl -> 
+        | TVariant (_, vl) -> 
             List.fold_left
                 (fun b (_,ot) ->
                     (match ot with
@@ -178,12 +178,15 @@ let rec unify t1 t2 pos =
     | (TAlias (s1,_), TAlias (s2,_)) when s1=s2 -> ()
     | (TRecord rl1, TRecord rl2) when List.length rl1 = List.length rl2 ->
         List.iter2 (fun (_,_,x) (_,_,y) -> unify x y pos) rl1 rl2
-    | (TVariant vl1, TVariant vl2) when List.length vl1 = List.length vl2 ->
+    | (TVariant (s1, _), TVariant (s2, _)) when s1 = s2 -> ()
+    (*
+    | (TVariant (vl1, TVariant vl2) when List.length vl1 = List.length vl2 ->
         List.iter2 (fun (s1,ot1) (s2,ot2) ->
             match ot1,ot2 with
             | None,None -> ()
             | Some t1, Some t2 -> unify t1 t2 pos
             | _ -> error pos @@ "type mismatch between " ^ s1 ^ " and " ^ s2) vl1 vl2
+    *)
     | (_, _) -> error pos @@ "type mismatch between " ^ s_typ t2 ^ " and " ^ s_typ t1);
     debug_out @@ "unify"
 
@@ -197,7 +200,7 @@ let rec free_tyvars = function
     | TVar (x, {contents=None}) -> [x]
     | TVar (_, {contents=Some t}) -> free_tyvars t
     | TRecord rl -> List.fold_left (fun fvs (_,_,x) -> fvs @ free_tyvars x) [] rl
-    | TVariant vl -> List.fold_left (fun fvs (_,ot) ->
+    | TVariant (_, vl) -> List.fold_left (fun fvs (_,ot) ->
                             match ot with
                             | None -> fvs
                             | Some t -> fvs @ free_tyvars t)
@@ -221,7 +224,7 @@ let rec substitute subst = function
     | TVar (x, {contents=None}) as t -> (try List.assoc x subst with Not_found -> t)
     | TVar (_, {contents=Some t}) -> substitute subst t
     | TRecord rl -> TRecord (List.map (fun (s,b,t) -> (s,b, substitute subst t)) rl)
-    | TVariant vl -> TVariant (List.map (fun (s,ot) ->
+    | TVariant (id, vl) -> TVariant (id, List.map (fun (s,ot) ->
                                     (s, match ot with
                                             | None -> None
                                             | Some t -> Some (substitute subst t))) vl)
@@ -449,11 +452,11 @@ let rec infer e =
             let ty = Eval.typ_from_decl pos id tyd in
             tysym.tys <- generalize ty;
             (match ty with
-            | TAlias (_, TVariant vl) ->    (*TODO alias が美しくない *)
-                List.iter (fun (id, oty) ->
-                            let tysym = { tys = make_typ_scheme [] (TVariant vl);
+            | TVariant (id, vl) ->
+                List.iter (fun (s, oty) ->  (* TODO oty *)
+                            let tysym = { tys = make_typ_scheme [] (TVariant (id, vl));
                                 is_mutable = false } in
-                            Symbol.insert_tysym id tysym
+                            Symbol.insert_tysym s tysym
                             ) vl
             | _ -> ());
             TUnit

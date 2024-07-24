@@ -364,6 +364,9 @@ let type_test_data = [
 
     ("type Point2D = { x : int; y : int }", "unit");
     ("{ x = 1; y = 2 }", "{x:int;y:int}");
+
+    ("type Color = | Red | Green | Blue", "unit");
+    ("Red", "Color");
 ]
 
 let type_test () =
@@ -465,6 +468,9 @@ let eval_test_data = [
     ("decl a : int pair", VUnit);
     ("(1,2)", VTuple [VInt 1;VInt 2]);
     ("type Color = | Red | Green | Blue", VUnit);
+    ("if Red = Green then 1 else 2", VInt 2);
+    ("if Red = Blue then 1 else 2", VInt 2);
+    ("if Red = Red then 1 else 2", VInt 1);
     ("type Point2D = { x : int; y : int; }", VUnit);
     ("let p = { x = 1; y = 2 } in p", VRecord [("x",{contents=VInt 1});("y",{contents=VInt 2})]);
 ]

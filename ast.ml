@@ -53,7 +53,7 @@ type typ =
     | TFun of typ * typ
     | TVar of int * typ option ref
     | TRecord of (string * bool * typ) list
-    | TVariant of (string * typ option) list
+    | TVariant of string * (string * typ option) list
 and
     typ_scheme = {
         vars : int list;
@@ -209,12 +209,15 @@ let rec s_typ ty =
                 (3, "{" ^ s_list (fun (s,b,t) ->
                         (if b then "mut " else "") ^ s ^ ":" ^ to_s 0 t)
                         ";" rl ^ "}")
-            | TVariant vl ->
-                (3, "|" ^ s_list (fun (s, ot) ->
+            | TVariant (s, vl) ->
+                (3, s)
+                (*
+                    "|" ^ s_list (fun (s, ot) ->
                         match ot with
                         | None -> s
                         | Some t -> s ^ " " ^ to_s 0 t)
                         "|" vl)
+                *)
         in
         if m > n then str
         else "(" ^ str ^ ")"

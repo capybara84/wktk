@@ -367,6 +367,7 @@ let type_test_data = [
 
     ("type Color = | Red | Green | Blue", "unit");
     ("Red", "Color");
+    ("Color.Green", "Color");
 ]
 
 let type_test () =
@@ -467,10 +468,13 @@ let eval_test_data = [
     ("type 'a pair = 'a * 'a ", VUnit);
     ("decl a : int pair", VUnit);
     ("(1,2)", VTuple [VInt 1;VInt 2]);
+    ("type Light = | Blue | Yellow | Red", VUnit);
     ("type Color = | Red | Green | Blue", VUnit);
     ("if Red = Green then 1 else 2", VInt 2);
     ("if Red = Blue then 1 else 2", VInt 2);
     ("if Red = Red then 1 else 2", VInt 1);
+    ("Blue", VVariant ("Blue", None));
+    ("Yellow", VVariant ("Yellow", None));
     ("type Point2D = { x : int; y : int; }", VUnit);
     ("let p = { x = 1; y = 2 } in p", VRecord [("x",{contents=VInt 1});("y",{contents=VInt 2})]);
 ]

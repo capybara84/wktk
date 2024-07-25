@@ -2,7 +2,7 @@
 VVariantの実装
  途中までやってみたが、色々とイマイチ
  TVariant (string,typ option) list の typ optionのとことか。
- TAlias にすべきか、TVariantやTRecord自体に名前をもたすか。
+ *TAlias にすべきか、TVariantやTRecord自体に名前をもたすか。
  とりあえず適当にtyp optionをTODOにして実装してみた。
  動いているけどイマイチ。
 

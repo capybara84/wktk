@@ -155,7 +155,7 @@ let rec eval_shallow_equal pos = function
     | (VString "", VNil) | (VNil, VString "") -> false
     | (VString _, VNil) | (VNil, VString _) -> false
     | (VTuple xl, VTuple yl) -> shallow_equal_tuple pos (xl, yl)
-    | (VVariant (s1,ov1), VVariant (s2,ov2)) -> s1 = s2 (*TODO ov1 ov2 *)
+    | (VVariant (_,s1,ov1), VVariant (_,s2,ov2)) -> s1 = s2 (*TODO ov1 ov2 *)
     | (lhs, rhs) -> error pos @@ "type error (shallow equal) " ^ s_value lhs ^ " & " ^ s_value rhs
 and shallow_equal_tuple pos = function
     | ([], []) -> true
@@ -179,7 +179,7 @@ let rec eval_deep_equal pos = function
     | (VString _, VNil) | (VNil, VString _) -> false
     | (VTuple xl, VTuple yl) -> deep_equal_tuple pos (xl, yl)
     | (VType ty1, VType ty2) -> typ_equal ty1 ty2
-    | (VVariant (s1,ov1), VVariant (s2,ov2)) -> s1 = s2 (*TODO ov1 ov2 *)
+    | (VVariant (_,s1,ov1), VVariant (_,s2,ov2)) -> s1 = s2 (*TODO ov1 ov2 *)
     | (lhs, rhs) -> error pos @@ "type error (deep equal) " ^ s_value lhs ^ " & " ^ s_value rhs
 
 and deep_equal_tuple pos = function
@@ -377,6 +377,11 @@ let rec eval e =
                         let sym = Symbol.lookup_from_module modu id in
                         sym.v
                     with Not_found -> error pos @@ "unknown symbol '" ^ id ^ "'")
+                | VType ((TVariant (vs, vl)) as t) ->
+                    (try
+                        let _ = List.assoc id vl in
+                        VVariant (t, id, None)  (*TODO None*)
+                    with Not_found -> error pos @@ "unknown symbol '" ^ vs ^ "." ^ id ^ "'")
                 | _ ->
                     (*TODO object message *)
                     VUnit
@@ -405,7 +410,7 @@ let rec eval e =
             (match ty with
             | TVariant (_, vl) ->
                 List.iter (fun (s, oty) -> (*TODO otyを使っていない *)
-                            let sym = { v = VVariant (s, None (*TODO*) ); is_mutable = false } in
+                            let sym = { v = VVariant (ty, s, None (*TODO*) ); is_mutable = false } in
                             Symbol.insert_sym s sym
                             ) vl
             | _ -> ());

@@ -368,6 +368,11 @@ let type_test_data = [
     ("type Color = | Red | Green | Blue", "unit");
     ("Red", "Color");
     ("Color.Green", "Color");
+    ("Color.Red", "Color");
+    ("type TrafficLight = | Blue | Yellow | Red", "unit");
+    ("Red", "TrafficLight");
+    ("Color.Red", "Color");
+    ("TrafficLight.Red", "TrafficLight");
 ]
 
 let type_test () =
@@ -473,8 +478,16 @@ let eval_test_data = [
     ("if Red = Green then 1 else 2", VInt 2);
     ("if Red = Blue then 1 else 2", VInt 2);
     ("if Red = Red then 1 else 2", VInt 1);
+    ("if Color.Red = Color.Red then 1 else 2", VInt 1);
+    (*
+    ("if Color.Red = Light.Red then 1 else 2", VInt 1);
+    ("if Color.Red = Yellow then 1 else 2", VInt 2);
+    *)
+    ("if Light.Red = Yellow then 1 else 2", VInt 2);
+(*
     ("Blue", VVariant ("Blue", None));
     ("Yellow", VVariant ("Yellow", None));
+*)
     ("type Point2D = { x : int; y : int; }", VUnit);
     ("let p = { x = 1; y = 2 } in p", VRecord [("x",{contents=VInt 1});("y",{contents=VInt 2})]);
 ]

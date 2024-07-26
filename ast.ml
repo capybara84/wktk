@@ -126,7 +126,7 @@ and value =
     | VClosure of expr * expr * env
     | VBuiltin of (pos -> expr -> value)
     | VRecord of (string * value ref) list
-    | VVariant of string * value option
+    | VVariant of typ * string * value option
 and
     symbol = {
         mutable v : value;
@@ -317,8 +317,9 @@ let rec s_value = function
     | VClosure _ -> "<closure>"
     | VBuiltin _ -> "<builtin>"
     | VRecord rl -> "{" ^ s_list (fun (s,vr) -> s ^ "=" ^ s_value !vr) ";" rl ^ "}"
-    | VVariant (s, None) -> s
-    | VVariant (s, Some v) -> s ^ " " ^ s_value v
+    | VVariant (TVariant (t, _), s, None) -> t ^ "." ^ s
+    | VVariant (TVariant (t, _), s, Some v) -> t ^ "." ^ s ^ " " ^ s_value v
+    | VVariant (_, _, _) -> failwith "VVariant"
 and cons_to_string = function
     | VCons (x, VNil) -> s_value x
     | VCons (x, (VCons _ as xs)) -> (s_value x) ^ ", " ^ (cons_to_string xs)

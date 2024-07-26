@@ -424,6 +424,11 @@ let rec infer e =
                             tysym.tys.body
                         with Not_found -> error pos @@ "unknown Symbol '" ^ id ^ "'")
                     with Not_found -> error pos @@ "unknown module '" ^ name ^ "'")
+                | TVariant (s, vl) ->
+                    (try
+                        ignore @@ List.assoc id vl;
+                        t
+                    with Not_found -> error pos @@ "unknown symbol '" ^ s ^ "." ^ id ^ "'")
                 | _ ->
                     (*TODO object message *)
                     TUnit
@@ -454,8 +459,6 @@ let rec infer e =
             (match ty with
             | TVariant (id, vl) ->
                 List.iter (fun (s, oty) ->  (* TODO oty *)
-                            let tysym = { tys = make_typ_scheme [] (TVariant (id, vl));
-                                is_mutable = false } in
                             Symbol.insert_tysym s tysym
                             ) vl
             | _ -> ());

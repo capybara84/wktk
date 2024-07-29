@@ -1,5 +1,5 @@
 
-type Color = | Red | Green | Blue
+type Color = | Red | Green | Blue | RGB int * int * int
 
 //print_color : Color -> unit
 print_color c =
@@ -10,9 +10,11 @@ print_color c =
     else if c = Blue then
         prn "BLUE"
     else
-        prn "RGB"
+        prn c
+
 
 _ =
     print_color Green
     print_color Red
     print_color Blue
+    print_color (Color.RGB (1,2,3))

@@ -373,6 +373,12 @@ let type_test_data = [
     ("Red", "TrafficLight");
     ("Color.Red", "Color");
     ("TrafficLight.Red", "TrafficLight");
+
+    ("type A = | A | B int | C char", "unit");
+    ("A.A", "A");
+    ("B 10", "A");
+    ("A.B 20", "A");
+    ("C 'a'", "A");
 ]
 
 let type_test () =
@@ -479,17 +485,20 @@ let eval_test_data = [
     ("if Red = Blue then 1 else 2", VInt 2);
     ("if Red = Red then 1 else 2", VInt 1);
     ("if Color.Red = Color.Red then 1 else 2", VInt 1);
-    (*
-    ("if Color.Red = Light.Red then 1 else 2", VInt 1);
-    ("if Color.Red = Yellow then 1 else 2", VInt 2);
-    *)
     ("if Light.Red = Yellow then 1 else 2", VInt 2);
-(*
-    ("Blue", VVariant ("Blue", None));
-    ("Yellow", VVariant ("Yellow", None));
-*)
+
+    ("Blue", VVariant (TVariant ("Color", [("Red",None);("Green",None);("Blue",None)]), "Blue", None));
+    ("Yellow", VVariant (TVariant ("Light", [("Blue",None);("Yellow",None);("Red",None)]), "Yellow", None));
+
     ("type Point2D = { x : int; y : int; }", VUnit);
     ("let p = { x = 1; y = 2 } in p", VRecord [("x",{contents=VInt 1});("y",{contents=VInt 2})]);
+
+    ("type AA = | A | B int | C char", VUnit);
+    ("A", VVariant (TVariant ("AA", [("A",None);("B",Some TInt);("C",Some TChar)]), "A", None));
+    ("AA.A", VVariant (TVariant ("AA", [("A",None);("B",Some TInt);("C",Some TChar)]), "A", None));
+    ("B 10", VVariant (TVariant ("AA", [("A",None);("B",Some TInt);("C",Some TChar)]), "B", Some (VInt 10)));
+    ("AA.B 20", VVariant (TVariant ("AA", [("A",None);("B",Some TInt);("C",Some TChar)]), "B", Some (VInt 20)));
+    ("C 'a'", VVariant (TVariant ("AA", [("A",None);("B",Some TInt);("C",Some TChar)]), "C", Some (VChar 'a')));
 ]
 
 

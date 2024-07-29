@@ -314,6 +314,17 @@ let rec eval e =
                     Symbol.leave_env ctx;
                     res
                 | VBuiltin fn -> fn pos arg
+                | VVariant (t, s, None) ->
+                (*
+                    print_endline @@ "VVariant :" ^ s_typ t ^ "." ^ s ^ ":None";
+                *)
+                    let arg_part = eval arg in
+                    VVariant (t, s, Some arg_part)
+                | VVariant (t, s, Some v) ->
+                    print_endline @@ "VVariant :" ^ s_typ t ^ "." ^ s ^ ":" ^ s_value v;
+                    (*TODO*)
+                    VUnit
+
                 | x -> error pos @@ "application of non-function: " ^ s_value x
             in
             v
@@ -384,6 +395,7 @@ let rec eval e =
                     with Not_found -> error pos @@ "unknown symbol '" ^ vs ^ "." ^ id ^ "'")
                 | _ ->
                     (*TODO object message *)
+print_endline @@ "!!!" ^ s_value v ^ "!!!";
                     VUnit
             end
         | (EBlock el, pos) ->

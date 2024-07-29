@@ -187,7 +187,7 @@ let rec unify t1 t2 pos =
             | Some t1, Some t2 -> unify t1 t2 pos
             | _ -> error pos @@ "type mismatch between " ^ s1 ^ " and " ^ s2) vl1 vl2
     *)
-    | (_, _) -> error pos @@ "type mismatch between " ^ s_typ t2 ^ " and " ^ s_typ t1);
+    | (_, _) -> error pos @@ "type mismatch between " ^ s_typ t2 ^ " and " ^ s_typ t1 ^ " (unify)");
     debug_out @@ "unify"
 
 
@@ -274,6 +274,12 @@ let infer_binary op tl tr pos =
         unify (TList tl) tr pos;
         tr
 
+let get_variant_sym e =
+    match e with
+    | (EId s, _) -> s
+    | (EMessage (_, id), _) -> id
+    | _ -> failwith "get_variant_sym bug"
+
 
 let rec infer e = 
     debug_in "infer";
@@ -336,9 +342,26 @@ let rec infer e =
             debug_print @@ "infer apply " ^ s_expr fn ^ ", " ^ s_expr arg;
             let t_fn = infer fn in
             let t_arg = infer arg in
-            let t = new_tvar () in
-            unify t_fn (TFun (t_arg, t)) pos;
-            t
+            begin
+                match t_fn with
+                | TVariant (_, vl) ->
+                    begin
+                        try
+                            let s = get_variant_sym fn in
+                            (match List.assoc s vl with
+                            | None ->
+                                error pos "invalid apply"
+                            | Some t ->
+                                unify t_arg t pos;
+                                t_fn)
+                        with Not_found -> failwith "TVariant bug?"
+                    end
+                | _ -> begin
+                        let t = new_tvar () in
+                        unify t_fn (TFun (t_arg, t)) pos;
+                        t
+                    end
+            end
         | (ELet (el, body), pos) ->
             debug_print @@ "infer let ... in " ^ s_expr body;
             let ctx = Symbol.enter_new_tenv () in
@@ -367,7 +390,7 @@ let rec infer e =
                 let tysym = Symbol.lookup_tysym id in
                 let t = infer e in
                 if not (decl_equal tysym.tys.body t) then
-                    error pos @@ "Type mismatch between " ^ s_typ tysym.tys.body ^ " and " ^ s_typ t; TUnit
+                    error pos @@ "Type mismatch between " ^ s_typ tysym.tys.body ^ " and " ^ s_typ t ^ " (defun)"; TUnit
             with Not_found ->
                 let tys = generalize (new_tvar()) in
                 let tysym = { tys = tys; is_mutable = false } in

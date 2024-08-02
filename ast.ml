@@ -183,8 +183,8 @@ let rec s_typ ty =
             match ty with
             | TUnit -> (5, "unit") | TInt -> (5, "int") | TFloat -> (5, "float")
             | TBool -> (5, "bool") | TChar -> (5, "char") | TString -> (5, "string")
-            | TModule s -> (5, s)
-            | TAlias (s, _) -> (5, s)
+            | TModule s -> (5, "Module " ^ s)
+            | TAlias (s, t) -> (5, s (*^ "(" ^ to_s 0 t ^ ")"*) )
             | TConstr (t1, t2) ->
                 let s1 = to_s 1 t1 in
                 let s2 = to_s 0 t2 in

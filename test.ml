@@ -381,6 +381,10 @@ let type_test_data = [
     ("C 'a'", "A");
 
     ("type 'a aaa = ('a * int)", "unit");
+    ("type i = int", "unit");
+    ("type n = int", "unit");
+    ("decl fff : i -> int", "unit");
+    ("let fff n = n + 1 in fff", "i -> int");
 ]
 
 let type_test () =

@@ -59,7 +59,9 @@ let rec typ_from_decl pos id = function
 
 let rec typ_equal t1 t2 =
     match (t1, t2) with
-    | (TAlias (s1,_), TAlias (s2,_)) -> s1 = s2
+    | (TAlias (s1,_), TAlias (s2,_)) when s1 = s2 -> true
+    | (TAlias (_,t), _) -> typ_equal t t2
+    | (_, TAlias (_,t)) -> typ_equal t1 t
     | (TConstr (t11, t12), TConstr (t21, t22)) -> typ_equal t11 t21 && typ_equal t12 t22
     | (TList TChar, TString) | (TString, TList TChar) -> true
     | (TList t1, TList t2) -> typ_equal t1 t2

@@ -415,6 +415,7 @@ print_endline @@ "!!!" ^ s_value v ^ "!!!";
             debug_print @@ "eval import " ^ mid;
             VUnit
         | (ETypeDecl (tvs, id, tyd), pos) ->
+            (*TODO tvs*)
             debug_print @@ "type decl [" ^ s_list string_of_int "," tvs ^ "] " ^ id ^ " = " ^ s_typ_decl tyd;
             let ty = typ_from_decl pos id tyd in
             let sym = { v = VType ty; is_mutable = false } in

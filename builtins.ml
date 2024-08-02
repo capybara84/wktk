@@ -65,6 +65,11 @@ add = fn x y -> x + y
 let fn_add pos x =
     VClosure ((EId "y", pos), (EBinary (BinAdd, x, (EId "y", pos)), pos), Symbol.get_current_env())
 
+let fn_desc pos arg =
+    let arg_v = Eval.eval arg in
+    print_endline @@ s_expr arg ^ " : " ^ s_value arg_v;
+    VUnit
+
 let fn_modules _ _ =
     print_endline "modules:";
     Symbol.show_all_modules();
@@ -96,6 +101,7 @@ and func_list = [
 
     ("", "add", TFun (add_t, TFun (add_t, add_t)), fn_add);
 
+    ("", "desc", TFun (new_tvar(), TUnit), fn_desc);
     ("", "modules", TFun (TUnit, TUnit), fn_modules);
     ("", "builtins", TFun (TUnit, TUnit), fn_builtins);
 ]

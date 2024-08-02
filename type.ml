@@ -175,18 +175,21 @@ let rec unify t1 t2 pos =
             r2 := Some t1;
             debug_print @@ "... " ^ s_typ_raw t2
         end
+(*
     | (TAlias (s1,_), TAlias (s2,_)) when s1=s2 -> ()
+*)
+    | (TAlias (_,t1), TAlias (_,t2)) -> unify t1 t2 pos
     | (TRecord rl1, TRecord rl2) when List.length rl1 = List.length rl2 ->
         List.iter2 (fun (_,_,x) (_,_,y) -> unify x y pos) rl1 rl2
+(*
     | (TVariant (s1, _), TVariant (s2, _)) when s1 = s2 -> ()
-    (*
-    | (TVariant (vl1, TVariant vl2) when List.length vl1 = List.length vl2 ->
+*)
+    | (TVariant (_, vl1), TVariant (_, vl2)) when List.length vl1 = List.length vl2 ->
         List.iter2 (fun (s1,ot1) (s2,ot2) ->
             match ot1,ot2 with
             | None,None -> ()
             | Some t1, Some t2 -> unify t1 t2 pos
-            | _ -> error pos @@ "type mismatch between " ^ s1 ^ " and " ^ s2) vl1 vl2
-    *)
+            | _ -> error pos @@ "type mismatch between " ^ s1 ^ " and " ^ s2 ^ " (unify variant)") vl1 vl2
     | (_, _) -> error pos @@ "type mismatch between " ^ s_typ t2 ^ " and " ^ s_typ t1 ^ " (unify)");
     debug_out @@ "unify"
 
@@ -474,6 +477,7 @@ let rec infer e =
             load_module mid aid;
             TUnit
         | (ETypeDecl (tvs, id, tyd), pos) ->
+            (*TODO tvs*)
             debug_print @@ "type decl [" ^ s_list string_of_int "," tvs ^ "] " ^ id ^ " = " ^ s_typ_decl tyd;
             let tysym = { tys = generalize (new_tvar()); is_mutable = false } in
             Symbol.insert_tysym id tysym;

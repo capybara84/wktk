@@ -379,6 +379,8 @@ let type_test_data = [
     ("B 10", "A");
     ("A.B 20", "A");
     ("C 'a'", "A");
+
+    ("type 'a aaa = ('a * int)", "unit");
 ]
 
 let type_test () =

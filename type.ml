@@ -176,7 +176,8 @@ let rec unify t1 t2 pos =
             debug_print @@ "... " ^ s_typ_raw t2
         end
     | (TAlias (s1,_), TAlias (s2,_)) when s1 = s2 -> ()
-    | (TAlias (_,t1), TAlias (_,t2)) -> unify t1 t2 pos
+    | (TAlias (_,t1'), _) -> unify t1' t2 pos
+    | (_, TAlias (_,t2')) -> unify t1 t2' pos
     | (TRecord rl1, TRecord rl2) when List.length rl1 = List.length rl2 ->
         List.iter2 (fun (_,_,x) (_,_,y) -> unify x y pos) rl1 rl2
     | (TVariant (s1, _), TVariant (s2, _)) when s1 = s2 -> ()

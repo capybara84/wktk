@@ -385,6 +385,10 @@ let type_test_data = [
     ("type n = int", "unit");
     ("decl fff : i -> int", "unit");
     ("let fff n = n + 1 in fff", "i -> int");
+    ("decl ggg : i -> int", "unit");
+    ("let ggg n = n + 1 in ggg 2", "int");
+    ("decl hhh : int -> i", "unit");
+    ("let hhh n = n in hhh 3", "i");
 ]
 
 let type_test () =
